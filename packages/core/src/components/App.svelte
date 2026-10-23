@@ -2,7 +2,7 @@
   // The whole app: loads the card data once, then shows the deck list (#/) or one deck (#/deck/<id>).
   import { onMount } from 'svelte';
   import { useRegisterSW } from 'virtual:pwa-register/svelte';
-  import { requestPersistence, useDatabase } from '../db';
+  import { dropImageCache, requestPersistence, useDatabase } from '../db';
   import { indexCards } from '../deck';
   import type { Card, CardData, CardIndex, GameDef } from '../types';
   import Editor from './Editor.svelte';
@@ -23,6 +23,7 @@
 
   onMount(() => {
     requestPersistence();
+    dropImageCache();
     fetch('data/cards.json')
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);

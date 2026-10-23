@@ -38,7 +38,15 @@ export const getDeck = (id: string) => run<Deck | undefined>('readonly', (s) => 
 export const putDeck = (d: Deck) => run('readwrite', (s) => s.put(JSON.parse(JSON.stringify(d))));
 export const deleteDeck = (id: string) => run('readwrite', (s) => s.delete(id));
 
-/** Asks the browser not to evict our data when storage runs low (best effort). */
+/**
+ * Asks the browser not to evict our data when storage runs low (best effort). This protects your decks;
+ * it's safe because the app stores only a few MB (card images are left to the browser's own cache).
+ */
 export function requestPersistence(): void {
   navigator.storage?.persist?.().catch(() => {});
+}
+
+/** Removes the card image cache older versions kept (up to ~1 GB for SWU). Safe to call every start. */
+export function dropImageCache(): void {
+  globalThis.caches?.delete('card-images').catch(() => {});
 }

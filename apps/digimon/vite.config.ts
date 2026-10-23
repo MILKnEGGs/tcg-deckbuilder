@@ -41,18 +41,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         cleanupOutdatedCaches: true,
-        // Card images are too many to precache; keep the ones you've looked at.
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.hostname === 'images.digimoncard.io',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'card-images',
-              expiration: { maxEntries: 5000, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        // Card images are deliberately not stored by the app: they load like any website's images and the
+        // browser's own cache keeps and clears them as space allows.
       },
     }),
   ],
