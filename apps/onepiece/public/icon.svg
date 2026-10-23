@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#140b0c"/>
+  <g fill="none" stroke="#ef4444" stroke-width="6" opacity="0.3">
+    <path d="M40 420c60-30 120-30 180 0s120 30 180 0 60-20 80-10"/>
+    <path d="M40 455c60-30 120-30 180 0s120 30 180 0 60-20 80-10"/>
+  </g>
+  <rect x="150" y="128" width="170" height="238" rx="18" fill="#29191c" stroke="#ef4444" stroke-width="10" transform="rotate(-12 235 247)"/>
+  <rect x="196" y="140" width="170" height="238" rx="18" fill="#1d1214" stroke="#ef4444" stroke-width="10" transform="rotate(8 281 259)"/>
+  <text x="281" y="290" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="92" fill="#ef4444" transform="rotate(8 281 259)">M</text>
+</svg>

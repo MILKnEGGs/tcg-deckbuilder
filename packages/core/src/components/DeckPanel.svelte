@@ -78,7 +78,7 @@
     {@const list = (deck.zones[z.id] ?? []).flatMap((e) => Array.from({ length: e.qty }, () => e.id))}
     {#each list as id, i (id + i)}
       {@const c = index.get(id)}
-      <div class="slot" class:flag-error={flagged.get(id) === 'error'}>
+      <div class="slot" class:flag-error={flagged.get(id) === 'error'} class:tall={c && !game.image(c).landscape}>
         {#if c}
           <button class="slot-art" onclick={() => onOpen(c)} title={game.label(c)}>
             <img src={game.image(c).src} alt={game.label(c)} />
@@ -160,6 +160,10 @@
     background: var(--panel-2);
     display: grid;
     place-items: center;
+  }
+  /* Portrait leaders (One Piece) instead of landscape ones (SWU). */
+  .slot.tall {
+    aspect-ratio: 63 / 88;
   }
   .slot.flag-error {
     outline: 2px solid var(--error);

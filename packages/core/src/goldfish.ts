@@ -1,7 +1,11 @@
 // Solo test draws ("goldfishing"): shuffle, opening hand, mulligan, resources, draws per turn.
 // No rules are enforced beyond counts; it's for seeing how a deck's hands and curve feel.
 
-import type { Deck, GoldfishDef } from './types';
+import type { Card, CardIndex, Deck, GoldfishDef as Def } from './types';
+
+// The functions here don't care about a game's card type.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type GoldfishDef = Def<any>;
 
 export interface Fish {
   library: string[];
@@ -18,6 +22,10 @@ export interface Fish {
   mulligansLeft: number;
   /** Resources you may still add this turn. */
   resourcesLeft: number;
+  /** The game's per-turn counter (One Piece DON!!). */
+  counter: number;
+  /** How many stack cards to deal when the first turn starts. */
+  stackSize: number;
   /** Turn-by-turn record shown in the log, newest last. */
   log: string[];
 }
@@ -34,11 +42,13 @@ export function shuffle<T>(list: T[], random = Math.random): T[] {
 /** Every copy in the given zones, one id per card. */
 export const pile = (deck: Deck, zones: string[]) => zones.flatMap((z) => (deck.zones[z] ?? []).flatMap((e) => Array.from({ length: e.qty }, () => e.id)));
 
-export function start(deck: Deck, cfg: GoldfishDef, random = Math.random): Fish {
+export function start<C extends Card>(deck: Deck, cfg: Def<C>, cards: CardIndex<C> = new Map(), random = Math.random): Fish {
   const library = shuffle(pile(deck, cfg.zones), random);
   const hand = library.splice(0, cfg.hand);
   const side = cfg.side ? shuffle(pile(deck, [cfg.side.zone]), random) : [];
   return {
+    counter: 0,
+    stackSize: cfg.stack ? (cfg.stack.countFrom?.(deck, cards) ?? cfg.stack.count) : 0,
     library,
     hand,
     resources: [],
@@ -102,21 +112,35 @@ export function nextTurn(f: Fish, cfg: GoldfishDef): Fish {
   if (f.turn === 0) {
     // Setup ends: deal the face-down stack (security) from the top of the deck.
     const library = [...f.library];
-    const stack = cfg.stack ? library.splice(0, cfg.stack.count) : [];
-    const parts = [cfg.resources ? `${f.resources.length} resources` : '', cfg.stack ? `${stack.length} ${cfg.stack.name.toLowerCase()}` : '', `${f.hand.length} cards in hand`];
-    return { ...f, library, stack, turn: 1, resourcesLeft: 0, log: [...f.log, `${cfg.turn} 1: ${parts.filter(Boolean).join(', ')}`] };
+    const stack = cfg.stack ? library.splice(0, f.stackSize) : [];
+    const counter = cfg.counter ? Math.min(cfg.counter.max, cfg.counter.first) : 0;
+    const parts = [
+      cfg.resources ? `${f.resources.length} resources` : '',
+      cfg.stack ? `${stack.length} ${cfg.stack.name.toLowerCase()}` : '',
+      cfg.counter ? `${counter} ${cfg.counter.name}` : '',
+      `${f.hand.length} cards in hand`,
+    ];
+    return { ...f, library, stack, counter, turn: 1, resourcesLeft: 0, log: [...f.log, `${cfg.turn} 1: ${parts.filter(Boolean).join(', ')}`] };
   }
   const library = [...f.library];
   const drawn = library.splice(0, cfg.draw);
   const turn = f.turn + 1;
+  const counter = cfg.counter ? Math.min(cfg.counter.max, f.counter + cfg.counter.perTurn) : 0;
   return {
     ...f,
     library,
     hand: [...f.hand, ...drawn],
     turn,
+    counter,
     resourcesLeft: cfg.resources?.perTurn ?? 0,
-    log: [...f.log, `${cfg.turn} ${turn}: drew ${drawn.length}${drawn.length < cfg.draw ? ' (deck empty)' : ''}`],
+    log: [...f.log, `${cfg.turn} ${turn}: drew ${drawn.length}${drawn.length < cfg.draw ? ' (deck empty)' : ''}${cfg.counter ? `, ${counter} ${cfg.counter.name}` : ''}`],
   };
+}
+
+/** Adjusts the counter by hand (effects that add or return DON!!). */
+export function bumpCounter(f: Fish, cfg: GoldfishDef, by: number): Fish {
+  if (!cfg.counter) return f;
+  return { ...f, counter: Math.max(0, Math.min(cfg.counter.max, f.counter + by)) };
 }
 
 /**

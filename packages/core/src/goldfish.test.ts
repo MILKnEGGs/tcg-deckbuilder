@@ -42,6 +42,24 @@ describe('goldfish', () => {
     expect([f.turn, f.hand.length, f.resourcesLeft]).toEqual([2, 6, 1]);
   });
 
+  it('deals a stack sized from the deck and grows the counter each turn', () => {
+    const op: GoldfishDef = {
+      hand: 5,
+      mulligans: 1,
+      draw: 1,
+      turn: 'Turn',
+      zones: ['main'],
+      stack: { name: 'Life', count: 5, countFrom: (d) => (d.zones.leader?.length ? 4 : 5) },
+      counter: { name: 'DON!!', first: 1, perTurn: 2, max: 10 },
+    };
+    let f = start(deck, op);
+    expect(f.stackSize).toBe(4);
+    f = nextTurn(f, op);
+    expect([f.stack.length, f.counter]).toEqual([4, 1]);
+    for (let i = 0; i < 6; i++) f = nextTurn(f, op);
+    expect(f.counter).toBe(10);
+  });
+
   it('computes the odds of drawing at least one of a card', () => {
     expect(atLeastOne(50, 0, 6)).toBe(0);
     expect(atLeastOne(50, 50, 6)).toBe(1);

@@ -95,8 +95,13 @@ export interface GoldfishDef<C extends Card = Card> {
   turn: string;
   /** Cards put face down as resources from the opening hand, and how many you may add each turn after. */
   resources?: { setup: number; perTurn: number };
-  /** Face-down cards dealt from the deck once setup is done (Digimon's 5 security cards). */
-  stack?: { name: string; count: number };
+  /**
+   * Face-down cards dealt from the deck once setup is done: Digimon's 5 security cards, or One Piece's
+   * life cards, whose number comes from the leader.
+   */
+  stack?: { name: string; count: number; countFrom?(deck: Deck, cards: CardIndex<C>): number };
+  /** A number that grows each turn, like One Piece's DON!!: `first` on turn 1, then +`perTurn`, up to `max`. */
+  counter?: { name: string; first: number; perTurn: number; max: number };
   /** A separate deck from another zone, played from the top (Digimon's Digi-Egg deck). */
   side?: { zone: string; name: string; action: string; into: string };
   /** Zones shuffled into the draw pile. */

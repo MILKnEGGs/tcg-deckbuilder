@@ -130,7 +130,7 @@
       <div class="summary"><DeckSummary {index} {deck} {format} {issues} sticky={false} /></div>
       <div class="command">
         {#each commandCards as c, i (c.id + i)}
-          <button class="lead" class:flag-error={flagged.get(c.id) === 'error'} onclick={() => onOpen(c)} title={game.label(c)}>
+          <button class="lead" class:flag-error={flagged.get(c.id) === 'error'} class:tall={!game.image(c).landscape} onclick={() => onOpen(c)} title={game.label(c)}>
             <img src={game.image(c).src} alt={game.label(c)} />
           </button>
         {/each}
@@ -262,6 +262,11 @@
     border-radius: 12px;
     overflow: hidden;
     background: var(--panel-2);
+  }
+  /* Portrait leaders (One Piece) instead of landscape ones (SWU). */
+  .lead.tall {
+    aspect-ratio: 63 / 88;
+    width: min(190px, calc((100% - 24px) / 3));
   }
   .lead img {
     width: 100%;
@@ -441,7 +446,8 @@
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 8px;
     }
-    .lead {
+    .lead,
+    .lead.tall {
       width: 100%;
     }
     .columns {

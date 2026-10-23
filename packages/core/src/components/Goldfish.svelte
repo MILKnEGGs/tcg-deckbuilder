@@ -1,14 +1,14 @@
 <script lang="ts" generics="C extends Card">
   // Goldfish: draw sample hands and step through turns alone, plus the odds of early plays.
   import { onMount } from 'svelte';
-  import { atLeastOne, flipStack, fromSide, mulligan, move, nextTurn, pile, setupDone, start, unplay, type Fish } from '../goldfish';
+  import { atLeastOne, bumpCounter, flipStack, fromSide, mulligan, move, nextTurn, pile, setupDone, start, unplay, type Fish } from '../goldfish';
   import type { Card, CardIndex, Deck, FormatDef, GameDef, GoldfishDef } from '../types';
 
   let { game, index, deck, format, config, onClose }: { game: GameDef<C>; index: CardIndex<C>; deck: Deck; format: FormatDef; config: GoldfishDef<C>; onClose: () => void } = $props();
 
   let dialog = $state<HTMLDialogElement>();
   // svelte-ignore state_referenced_locally
-  let fish = $state<Fish>(start(deck, config));
+  let fish = $state<Fish>(start(deck, config, index));
   let picked = $state<number | null>(null);
 
   onMount(() => dialog?.showModal());
@@ -65,7 +65,14 @@
       {fish.turn ? `${config.turn} ${fish.turn}` : 'Setup'} · {fish.library.length} in deck{config.resources ? ` · ${fish.resources.length} resources` : ''}
     </span>
     <span class="spacer"></span>
-    <button onclick={() => { fish = start(deck, config); picked = null; }}>New hand</button>
+    {#if config.counter && fish.turn > 0}
+      <span class="counter">
+        <button class="ghost small" onclick={() => (fish = bumpCounter(fish, config, -1))} aria-label="One less {config.counter.name}">−</button>
+        <strong class="num">{fish.counter}</strong>/{config.counter.max} {config.counter.name}
+        <button class="ghost small" onclick={() => (fish = bumpCounter(fish, config, 1))} aria-label="One more {config.counter.name}">+</button>
+      </span>
+    {/if}
+    <button onclick={() => { fish = start(deck, config, index); picked = null; }}>New hand</button>
     <button class="ghost" onclick={() => dialog?.close()} aria-label="Close">✕</button>
   </header>
 
@@ -125,7 +132,7 @@
         {/if}
         {#if config.stack}
           <section>
-            <h3>{config.stack.name} <span class="num muted">{fish.turn ? fish.stack.length : config.stack.count}</span></h3>
+            <h3>{config.stack.name} <span class="num muted">{fish.turn ? fish.stack.length : fish.stackSize}</span></h3>
             <div class="facedown">
               {#each Array.from({ length: fish.turn ? fish.stack.length : 0 }) as _, i (i)}<span class="back"></span>{/each}
               {#if !fish.turn}<span class="muted small">Dealt when the first {config.turn.toLowerCase()} starts.</span>{/if}
@@ -218,6 +225,18 @@
   }
   .spacer {
     flex: 1;
+  }
+  .counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    font-size: 0.9rem;
+  }
+  .counter strong {
+    color: var(--accent);
   }
   .body {
     padding: 12px 16px 24px;
