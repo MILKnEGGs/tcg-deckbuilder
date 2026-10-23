@@ -73,6 +73,23 @@ export function misplaced<C extends Card>(game: GameDef<C>, deck: Deck, cards: C
   return issues;
 }
 
+/** Cards the format doesn't allow at all, grouped by reason ("rotated out", "suspended"). */
+export function legalityIssues<C extends Card>(game: GameDef<C>, deck: Deck, cards: CardIndex<C>, format: FormatDef): Issue[] {
+  if (!game.illegal) return [];
+  const byReason = new Map<string, string[]>();
+  for (const list of Object.values(deck.zones))
+    for (const e of list) {
+      const c = cards.get(e.id);
+      const why = c && game.illegal(c, format);
+      if (why) (byReason.get(why) ?? byReason.set(why, []).get(why)!).push(e.id);
+    }
+  return [...byReason].map(([why, ids]) => ({
+    level: 'error' as const,
+    message: `${why[0].toUpperCase()}${why.slice(1)}: ${ids.map((id) => game.label(cards.get(id)!)).join(', ')}`,
+    cards: ids,
+  }));
+}
+
 /** Saved cards missing from today's data (shouldn't happen, but never lose them silently). */
 export function unknownCards<C extends Card>(deck: Deck, cards: CardIndex<C>): Issue[] {
   const ids = Object.values(deck.zones).flatMap((l) => l.filter((e) => !cards.has(e.id)).map((e) => e.id));

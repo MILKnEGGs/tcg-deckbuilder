@@ -1,8 +1,12 @@
 <script lang="ts" generics="C extends Card">
-  // The deck: size and price, rule issues, command cards (leaders/bases), then the list by group.
-  import { cycleOwned, massEntry, setAllOwned, setQty, sizeOf, textList, totals, zoneCount } from '../deck';
+  // The Build view's deck list: summary, command cards (leaders/bases), the list by group, Considering.
+  import { cycleOwned, setQty, zoneCount } from '../deck';
   import type { Card, CardIndex, Deck, Entry, FormatDef, GameDef, Issue } from '../types';
-  import { money, plural } from '../util';
+  import { money } from '../util';
+  import Considering from './Considering.svelte';
+  import CostCurve from './CostCurve.svelte';
+  import DeckActions from './DeckActions.svelte';
+  import DeckSummary from './DeckSummary.svelte';
 
   let {
     game,
@@ -16,6 +20,9 @@
     onRemove,
     onOpen,
     onPick,
+    onConsider,
+    onPromote,
+    onDemote,
   }: {
     game: GameDef<C>;
     index: CardIndex<C>;
@@ -28,11 +35,11 @@
     onRemove: (c: C, zone?: string) => void;
     onOpen: (c: C) => void;
     onPick: (zone: string) => void;
+    onConsider: (c: C, n?: number) => void;
+    onPromote: (c: C) => void;
+    onDemote: (c: C, zone: string) => void;
   } = $props();
 
-  const t = $derived(totals(deck, index));
-  const size = $derived(sizeOf(deck, format));
-  const target = $derived(format.size.target);
   const flagged = $derived(new Map(issues.flatMap((i) => (i.cards ?? []).map((id) => [id, i.level] as const))));
   const commandZones = $derived(format.zones.filter((z) => z.command));
   const listZones = $derived(format.zones.filter((z) => !z.command));
@@ -45,7 +52,7 @@
       const g = r.c ? game.group(r.c) : 'Unknown';
       (groups.get(g) ?? groups.set(g, []).get(g)!).push(r);
     }
-    const order = (g: string) => (game.groups.indexOf(g) + 1 || 99);
+    const order = (g: string) => game.groups.indexOf(g) + 1 || 99;
     return [...groups.entries()]
       .sort(([a], [b]) => order(a) - order(b))
       .map(([g, list]) => [
@@ -54,42 +61,8 @@
       ]);
   }
 
-  // Cost curve of the main deck.
-  const curve = $derived.by(() => {
-    const counts = new Map<number, number>();
-    for (const e of deck.zones.main ?? []) {
-      const c = index.get(e.id);
-      const cost = c ? game.cost(c) : null;
-      if (cost == null) continue;
-      const k = Math.min(cost, 8);
-      counts.set(k, (counts.get(k) ?? 0) + e.qty);
-    }
-    const max = Math.max(1, ...counts.values());
-    return Array.from({ length: 9 }, (_, i) => ({ label: i === 8 ? '8+' : String(i), n: counts.get(i) ?? 0, h: (counts.get(i) ?? 0) / max }));
-  });
-
-  async function copy(text: string, what: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      say(`${what} copied`);
-    } catch {
-      prompt(`Copy the ${what.toLowerCase()}:`, text);
-    }
-  }
-
-  async function buy() {
-    const list = massEntry(game, deck, index);
-    if (!list) return say("You own everything in this deck");
-    await copy(list, 'Shopping list');
-    window.open('https://www.tcgplayer.com/massentry', '_blank', 'noopener');
-  }
-
   function owned(zone: string, e: Entry) {
     cycleOwned(deck, zone, e.id);
-    changed();
-  }
-  function allOwned(v: boolean) {
-    setAllOwned(deck, v);
     changed();
   }
   function drop(zone: string, id: string) {
@@ -98,27 +71,7 @@
   }
 </script>
 
-<div class="summary">
-  <div class="size" class:over={size > target} class:done={size === target || (!format.size.exact && size > target)}>
-    <span class="big num">{size}<span class="of">/{target}</span></span>
-    <span class="small muted">{format.size.exact ? 'cards' : 'card minimum'}</span>
-  </div>
-  <div class="money">
-    <div><span class="muted small">Deck</span> <strong class="num">{money(t.total)}</strong></div>
-    <div><span class="muted small">To finish</span> <strong class="num finish">{money(t.toFinish)}</strong></div>
-    {#if t.unpriced}<div class="muted small">{plural(t.unpriced, 'card')} without a price</div>{/if}
-  </div>
-</div>
-
-{#if issues.length}
-  <ul class="issues">
-    {#each issues as i (i.message)}
-      <li class={i.level}>{i.message}</li>
-    {/each}
-  </ul>
-{:else if size}
-  <p class="legal small">Deck is legal for {format.name}.</p>
-{/if}
+<DeckSummary {index} {deck} {format} {issues} />
 
 <div class="command">
   {#each commandZones as z (z.id)}
@@ -142,6 +95,8 @@
   {/each}
 </div>
 
+<Considering {game} {index} {deck} {changed} {onConsider} {onPromote} {onOpen} />
+
 {#each listZones as z (z.id)}
   {@const groups = grouped(z.id)}
   {#if z.id === 'main' || groups.length}
@@ -156,7 +111,7 @@
           {#each rows as { e, c } (e.id)}
             <li class:flag-error={flagged.get(e.id) === 'error'} class:flag-warning={flagged.get(e.id) === 'warning'}>
               <span class="qty">
-                <button class="step" onclick={() => c ? onRemove(c, z.id) : drop(z.id, e.id)} aria-label="Remove one">−</button>
+                <button class="step" onclick={() => (c ? onRemove(c, z.id) : drop(z.id, e.id))} aria-label="Remove one">−</button>
                 <span class="num">{e.qty}</span>
                 <button class="step" onclick={() => c && onAdd(c, z.id)} disabled={!c} aria-label="Add one">+</button>
               </span>
@@ -164,6 +119,7 @@
                 {#if c && game.cost(c) != null}<span class="cost num">{game.cost(c)}</span>{/if}
                 <span class="label">{c ? game.label(c) : e.id}</span>
               </button>
+              <button class="demote" onclick={() => c && onDemote(c, z.id)} disabled={!c} title="Move one copy to Considering (a possible cut)" aria-label="Move one to Considering">?</button>
               <button
                 class="owned num"
                 class:all={e.owned >= e.qty}
@@ -184,96 +140,12 @@
 
 <section class="zone">
   <h3>Cost curve</h3>
-  <div class="curve">
-    {#each curve as b (b.label)}
-      <div class="bar">
-        <span class="n num small">{b.n || ''}</span>
-        <span class="fill" style:height="{Math.round(b.h * 64)}px"></span>
-        <span class="small muted">{b.label}</span>
-      </div>
-    {/each}
-  </div>
+  <CostCurve {game} {index} {deck} />
 </section>
 
-<section class="zone actions">
-  <h3>Buy & share</h3>
-  <button class="primary" onclick={buy}>Buy missing cards on TCGplayer</button>
-  <p class="muted small">Copies the cards you don't own and opens TCGplayer Mass Entry. Paste the list there.</p>
-  <div class="row">
-    <button onclick={() => allOwned(true)}>Mark all owned</button>
-    <button onclick={() => allOwned(false)}>Mark none owned</button>
-  </div>
-  <div class="row">
-    <button onclick={() => copy(game.exportDeck(deck, index), 'Decklist')}>{game.exportLabel}</button>
-    <button onclick={() => copy(textList(game, deck, index, format), 'Text list')}>Copy text list</button>
-  </div>
-</section>
+<DeckActions {game} {index} {deck} {format} {changed} {say} />
 
 <style>
-  .summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: 0;
-    z-index: 4;
-    background: var(--panel);
-  }
-  .size {
-    display: grid;
-  }
-  .big {
-    font-size: 1.8rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-  .of {
-    font-size: 1rem;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .size.done .big {
-    color: var(--ok);
-  }
-  .size.over .big {
-    color: var(--warning);
-  }
-  .money {
-    text-align: right;
-    display: grid;
-    gap: 2px;
-  }
-  .finish {
-    color: var(--accent);
-  }
-  .issues {
-    list-style: none;
-    margin: 0;
-    padding: 10px 16px 0;
-    display: grid;
-    gap: 6px;
-  }
-  .issues li {
-    padding: 7px 10px;
-    border-radius: 8px;
-    font-size: 0.88rem;
-    border-left: 3px solid;
-  }
-  .issues .error {
-    background: var(--error-bg);
-    border-color: var(--error);
-  }
-  .issues .warning {
-    background: var(--warning-bg);
-    border-color: var(--warning);
-  }
-  .legal {
-    color: var(--ok);
-    margin: 10px 16px 0;
-  }
   .command {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
@@ -371,7 +243,8 @@
     text-align: center;
     font-weight: 600;
   }
-  .step {
+  .step,
+  .demote {
     width: 24px;
     height: 24px;
     padding: 0;
@@ -382,6 +255,10 @@
   .step:hover:not(:disabled) {
     color: var(--text);
     border-color: var(--line);
+  }
+  .demote:hover:not(:disabled) {
+    color: var(--maybe);
+    border-color: var(--maybe);
   }
   .cname {
     flex: 1;
@@ -432,46 +309,5 @@
     width: 62px;
     text-align: right;
     color: var(--muted);
-  }
-  .curve {
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    height: 100px;
-  }
-  .bar {
-    flex: 1;
-    display: grid;
-    justify-items: center;
-    align-content: end;
-    gap: 2px;
-  }
-  .fill {
-    width: 100%;
-    background: var(--accent);
-    border-radius: 4px 4px 0 0;
-    min-height: 1px;
-    opacity: 0.85;
-  }
-  .actions {
-    display: grid;
-    gap: 8px;
-    padding-bottom: 32px;
-  }
-  .actions p {
-    margin: 0;
-  }
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .row button {
-    flex: 1;
-  }
-  @media (max-width: 860px) {
-    .summary {
-      top: 41px;
-    }
   }
 </style>

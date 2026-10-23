@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addCard, indexCards, newDeck, setQty } from '@milk/core/deck';
-import { aspectPenalty, formats, game, type SwuCard } from './game';
+import { aspectPenalty, formats, game, illegal, type SwuCard } from './game';
 
 const card = (id: string, type: string, aspects: string[], extra: Partial<SwuCard> = {}): SwuCard => ({
   id,
@@ -76,7 +76,7 @@ describe('Order 66', () => {
 });
 
 describe('printed copy limits', () => {
-  const vulture = card('VULTURE', 'Unit', ['Villainy'], { text: 'A deck can have up to 15 copies of this card.' });
+  const vulture = card('VULTURE', 'Unit', ['Villainy'], { set: 'JTL', text: 'A deck can have up to 15 copies of this card.' });
 
   it('override the format, singleton formats included', () => {
     for (const f of formats) {
@@ -89,6 +89,39 @@ describe('printed copy limits', () => {
   it('only apply to cards that say so', () => {
     expect(game.maxCopies(units[0], fmt('premier'))).toBe(3);
     expect(game.maxCopies(units[0], fmt('order66'))).toBe(1);
+  });
+});
+
+describe('legality', () => {
+  const old = card('SOR_001', 'Unit', [], { set: 'SOR' });
+  const reprinted = card('SOR_002', 'Unit', [], { set: 'SOR', alt: ['LAW_100'] });
+  const icons = card('IC27_001', 'Unit', [], { set: 'IC27' });
+  const cad = card('ASH_011', 'Leader', ['Cunning'], { set: 'ASH' });
+
+  it('limits Premier to the current blocks, counting reprints', () => {
+    expect(illegal(old, fmt('premier'))).toMatch(/Premier-legal/);
+    expect(illegal(reprinted, fmt('premier'))).toBeNull();
+    expect(illegal(old, fmt('eternal'))).toBeNull();
+    expect(illegal(old, fmt('order66'))).toBeNull();
+  });
+
+  it('brings in Icons 2027 on its legal date', () => {
+    expect(illegal(icons, fmt('premier'), '2026-11-19')).not.toBeNull();
+    expect(illegal(icons, fmt('premier'), '2026-11-20')).toBeNull();
+  });
+
+  it('knows suspended cards per format', () => {
+    expect(illegal(cad, fmt('premier'))).toBe('suspended in Premier');
+    expect(illegal(cad, fmt('twinsuns'))).toBeNull();
+  });
+
+  it('refuses to add an illegal card and flags one already in the deck', () => {
+    const premier = fmt('premier');
+    const all = indexCards({ updated: '', cards: [old, base, villain] });
+    const d = newDeck(premier, 'test');
+    expect(addCard(game, d, premier, old)).toMatch(/Premier-legal/);
+    setQty(d, 'main', 'SOR_001', 1);
+    expect(game.validate(d, all, premier).map((i) => i.message)).toContain('Not in a Premier-legal set: SOR_001');
   });
 });
 

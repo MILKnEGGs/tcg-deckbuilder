@@ -68,17 +68,23 @@ if (!printings.length) throw new Error('swu-db returned no cards');
 console.log(`swu-db: ${printings.length} printings in ${sets.length} sets`);
 
 // ---------------------------------------------------------------------------------------------
-// Prices: TCGCSV market price per TCGplayer product and printing ("Normal" or "Foil").
+// Prices: TCGCSV market price per TCGplayer product and printing ("Normal" or "Foil"), plus each
+// product's exact TCGplayer name. Mass Entry only recognises cards by that name.
 
 const prices = new Map();
+const products = new Map(); // productId -> name
 let priced = 0;
 await pool(groups, 4, async (g) => {
   try {
-    const { results } = await getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/${g.groupId}/prices`);
+    const [{ results }, { results: items }] = await Promise.all([
+      getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/${g.groupId}/prices`),
+      getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/${g.groupId}/products`),
+    ]);
     for (const p of results) {
       const v = p.marketPrice ?? p.midPrice ?? p.lowPrice;
       if (v != null) prices.set(`${p.productId}|${p.subTypeName}`, v);
     }
+    for (const p of items) products.set(p.productId, p.name);
     priced++;
   } catch (err) {
     console.warn(`  no prices for ${g.name}: ${err.message}`);
@@ -102,9 +108,39 @@ const priceOf = (p) => {
   return fromTcg ?? num(p.MarketPrice);
 };
 const idOf = (p) => `${p.Set}_${p.Number}`;
+
+// For cards swu-db doesn't link to TCGplayer: match TCGplayer's standard products by name.
+// TCGplayer spells some names differently ("C-3PO" vs "C-3P0", capitals, "Base // Token"), so compare loosely.
+const loose = (s) =>
+  s
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s*\/\/.*$/, '') // "Canto Bight // Credit"
+    .replace(/\s*\(\d+\/\d+\)$/, '') // "Chewbacca - Rrruuuurrr (46/104)"
+    .replace(/0/g, 'o')
+    .replace(/[^a-z0-9]/g, '');
+const ALT_ART = /\((?:hyperspace|showcase|prestige|serialized|foil|[^)]*promo[^)]*)/i;
+const byLooseName = new Map();
+for (const [id, name] of products) {
+  if (ALT_ART.test(name)) continue;
+  const k = loose(name);
+  (byLooseName.get(k) ?? byLooseName.set(k, []).get(k)).push(id);
+}
+function tcgByName(p) {
+  const keys = p.Type !== 'Base' && p.Subtitle ? [loose(`${p.Name} - ${p.Subtitle}`)] : [loose(p.Name)];
+  let best = null;
+  for (const k of keys)
+    for (const id of byLooseName.get(k) ?? []) {
+      const v = prices.get(`${id}|Normal`) ?? null;
+      if (!best || (v != null && (best.price == null || v < best.price))) best = { tcg: id, price: v };
+    }
+  return best;
+}
 const order = (a, b) => (setOrder.get(a.Set) ?? 99) - (setOrder.get(b.Set) ?? 99) || a.Number.localeCompare(b.Number);
 
 const cards = [];
+const unlisted = [];
 for (const all of byCard.values()) {
   all.sort(order);
   // Standard printings only; a card that was never printed plainly keeps its non-foil versions.
@@ -113,11 +149,17 @@ for (const all of byCard.values()) {
   if (!pool.length) pool = all;
 
   const main = pool[0];
+  // Cheapest standard printing that TCGplayer actually lists, so Mass Entry can find it.
   let cheapest = null;
   for (const p of pool) {
+    const id = Number(p.tcgplayerId);
+    if (!products.has(id)) continue;
     const v = priceOf(p);
-    if (v != null && (cheapest === null || v < cheapest.price)) cheapest = { price: v, tcg: p.tcgplayerId };
+    if (!cheapest || (v != null && (cheapest.price == null || v < cheapest.price))) cheapest = { price: v, tcg: id };
   }
+  cheapest ??= tcgByName(main);
+  if (!cheapest) unlisted.push(`${main.Name}${main.Subtitle ? ` - ${main.Subtitle}` : ''} (${idOf(main)})`);
+  const fallbackPrice = pool.map(priceOf).filter((v) => v != null).sort((a, b) => a - b)[0] ?? null;
 
   const card = {
     id: idOf(main),
@@ -139,8 +181,9 @@ for (const all of byCard.values()) {
     set: main.Set,
     img: main.FrontArt?.replace('https://cdn.swu-db.com/images/cards/', '').replace(/\.png$/, ''),
     backImg: main.BackArt?.replace('https://cdn.swu-db.com/images/cards/', '').replace(/\.png$/, '') || undefined,
-    price: cheapest?.price ?? null,
-    tcg: cheapest?.tcg ? Number(cheapest.tcg) : undefined,
+    price: cheapest?.price ?? fallbackPrice,
+    tcg: cheapest?.tcg,
+    tcgName: cheapest ? products.get(cheapest.tcg) : undefined,
   };
   // Every other printing's id (including alt arts), so imported decklists naming any version still match.
   const alt = [...new Set(all.map(idOf))].filter((id) => id !== card.id);
@@ -153,3 +196,4 @@ mkdirSync(new URL('.', OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), sets, cards }));
 const withPrice = cards.filter((c) => c.price != null).length;
 console.log(`Wrote ${cards.length} cards (${withPrice} with prices) to public/data/cards.json`);
+if (unlisted.length) console.log(`Not on TCGplayer (${unlisted.length}): ${unlisted.join(', ')}`);

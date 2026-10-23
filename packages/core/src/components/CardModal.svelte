@@ -1,7 +1,7 @@
 <script lang="ts" generics="C extends Card">
   // A card up close: big image (flip for double-sided), details, rules text, and add/remove.
   import { onMount } from 'svelte';
-  import { copies } from '../deck';
+  import { consideringCount, copies } from '../deck';
   import type { Card, Deck, FormatDef, GameDef } from '../types';
 
   let {
@@ -11,6 +11,9 @@
     card,
     onAdd,
     onRemove,
+    onConsider,
+    onPromote,
+    onDemote,
     onClose,
   }: {
     game: GameDef<C>;
@@ -19,6 +22,9 @@
     card: C;
     onAdd: (c: C, zone?: string) => void;
     onRemove: (c: C, zone?: string) => void;
+    onConsider: (c: C, n?: number) => void;
+    onPromote: (c: C) => void;
+    onDemote: (c: C, zone: string) => void;
     onClose: () => void;
   } = $props();
 
@@ -30,6 +36,8 @@
   const home = $derived(game.zoneFor(card, format));
   const hasSide = $derived(home === 'main' && format.zones.some((z) => z.id === 'side'));
   const inSide = $derived(copies(deck, card.id, ['side']));
+  const maybe = $derived(consideringCount(deck, card.id));
+  const why = $derived(game.illegal?.(card, format) ?? null);
 
   onMount(() => dialog?.showModal());
 </script>
@@ -54,19 +62,35 @@
         <p class="text">{p}</p>
       {/each}
 
+      {#if why}
+        <p class="illegal small">Not allowed in {format.name}: {why}.</p>
+      {/if}
       {#if home}
         <div class="add">
           <button onclick={() => onRemove(card, home)} disabled={!copies(deck, card.id, [home])}>−</button>
           <span class="num">{n} in deck{max < 99 ? ` (max ${max})` : ''}</span>
-          <button class="primary" onclick={() => onAdd(card)} disabled={n >= max}>+ Add</button>
+          <button class="primary" onclick={() => onAdd(card)} disabled={n >= max || !!why}>+ Add</button>
         </div>
         {#if hasSide}
           <div class="add">
             <button onclick={() => onRemove(card, 'side')} disabled={!inSide}>−</button>
             <span class="num">{inSide} in sideboard</span>
-            <button onclick={() => onAdd(card, 'side')} disabled={n >= max}>+ Side</button>
+            <button onclick={() => onAdd(card, 'side')} disabled={n >= max || !!why}>+ Side</button>
           </div>
         {/if}
+        <div class="add maybe">
+          <button onclick={() => onConsider(card, -1)} disabled={!maybe}>−</button>
+          <span class="num">{maybe} considering</span>
+          <button onclick={() => onConsider(card)}>+ Consider</button>
+        </div>
+        <div class="moves">
+          {#if maybe}
+            <button class="to-deck" onclick={() => onPromote(card)} disabled={n >= max || !!why}>Move 1 into the deck</button>
+          {/if}
+          {#if copies(deck, card.id, [home])}
+            <button class="to-maybe" onclick={() => onDemote(card, home)}>Move 1 to Considering (maybe cut)</button>
+          {/if}
+        </div>
       {:else}
         <p class="muted small">Can't be used in {format.name}.</p>
       {/if}
@@ -142,6 +166,33 @@
   }
   .add + .add {
     margin-top: 8px;
+  }
+  .add.maybe span {
+    color: var(--maybe);
+  }
+  .add.maybe button:last-child {
+    border-color: var(--maybe);
+  }
+  .moves {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .to-deck {
+    background: var(--maybe);
+    border-color: var(--maybe);
+    color: var(--maybe-ink);
+    font-weight: 600;
+  }
+  .to-maybe {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--maybe);
+    color: var(--maybe);
+  }
+  .illegal {
+    color: var(--error);
+    margin: 8px 0 0;
   }
   .info > a {
     display: inline-block;

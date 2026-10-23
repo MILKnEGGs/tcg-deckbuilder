@@ -1,20 +1,26 @@
 <script lang="ts" generics="C extends Card">
-  // One deck: search on the left, the deck on the right (tabs on a phone). Saves as you go.
+  // One deck, in two views. Build: search on the left, the deck list on the right (tabs on a phone).
+  // Deck: the deck alone, as card images, for reviewing and refining. Saves as you go.
   import { onMount } from 'svelte';
   import { deleteDeck, getDeck, putDeck } from '../db';
-  import { addCard, changeFormat, setQty } from '../deck';
+  import { addCard, changeFormat, considerToDeck, consideringCount, deckToConsider, setConsidering, setQty } from '../deck';
   import type { Card, CardData, CardIndex, Deck, GameDef } from '../types';
   import CardModal from './CardModal.svelte';
   import DeckPanel from './DeckPanel.svelte';
+  import DeckView from './DeckView.svelte';
+  import Goldfish from './Goldfish.svelte';
   import SearchPanel from './SearchPanel.svelte';
 
   let { game, data, index, id }: { game: GameDef<C>; data: CardData<C>; index: CardIndex<C>; id: string } = $props();
 
   let deck = $state<Deck | null>(null);
   let missing = $state(false);
+  let view = $state<'build' | 'deck'>('build');
   let tab = $state<'search' | 'deck'>('search');
+  let target = $state<'deck' | 'considering'>('deck');
   let onlyZone = $state<string | null>(null);
   let viewing = $state<C | null>(null);
+  let goldfish = $state(false);
   let toast = $state('');
   let toastTimer: ReturnType<typeof setTimeout>;
   let saveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -28,6 +34,8 @@
         // Make sure every zone of the format exists, even for decks saved by an older version.
         const f = game.formats.find((x) => x.id === d.format) ?? game.formats[0];
         for (const z of f.zones) d.zones[z.id] ??= [];
+        // Decks with their leaders/bases chosen open on the deck itself, for refining.
+        if (f.zones.some((z) => z.command && d.zones[z.id].length)) view = 'deck';
         deck = d;
       } else missing = true;
     });
@@ -64,7 +72,7 @@
     const z = zone ?? game.zoneFor(card, format);
     const def = format.zones.find((x) => x.id === z);
     // A full single-card slot (a leader or base in most formats) swaps instead of refusing.
-    if (def?.command && def.max === 1 && (deck.zones[def.id]?.length ?? 0) > 0) deck.zones[def.id] = [];
+    if (def?.command && def.max === 1 && (deck.zones[def.id]?.length ?? 0) > 0 && !game.illegal?.(card, format)) deck.zones[def.id] = [];
     const err = addCard(game, deck, format, card, z ?? undefined);
     if (err) say(err);
     else {
@@ -87,6 +95,25 @@
     }
   }
 
+  // Considering: a maybe-list beside the deck.
+  function consider(card: C, n = 1) {
+    if (!deck) return;
+    setConsidering(deck, card.id, consideringCount(deck, card.id) + n);
+    changed();
+  }
+  function promote(card: C) {
+    if (!deck) return;
+    const err = considerToDeck(game, deck, format, card);
+    if (err) say(err);
+    else changed();
+  }
+  function demote(card: C, zone: string) {
+    if (!deck) return;
+    deckToConsider(deck, zone, card.id);
+    changed();
+    say(`${game.label(card)} moved to Considering`);
+  }
+
   function setFormat(to: string) {
     if (!deck || to === deck.format) return;
     changeFormat(deck, format, game.formats.find((f) => f.id === to)!);
@@ -95,6 +122,8 @@
 
   function pick(zone: string) {
     onlyZone = zone;
+    target = 'deck';
+    view = 'build';
     tab = 'search';
   }
 
@@ -107,6 +136,7 @@
   }
 
   const deckCount = $derived(deck ? Object.values(deck.zones).reduce((n, l) => n + l.reduce((m, e) => m + e.qty, 0), 0) : 0);
+  const shared = $derived({ changed, say, onAdd: add, onRemove: remove, onOpen: (c: C) => (viewing = c), onPick: pick, onConsider: consider, onPromote: promote, onDemote: demote });
 </script>
 
 {#if missing}
@@ -115,35 +145,47 @@
     <a href="#/">Back to decks</a>
   </main>
 {:else if deck}
-<div class="editor">
+<div class="editor" class:deckview={view === 'deck'}>
   <header>
     <a class="back" href="#/" aria-label="Back to decks">‹ Decks</a>
     <input class="name" type="text" bind:value={deck.name} oninput={changed} aria-label="Deck name" />
+    <div class="views" role="group" aria-label="View">
+      <button class:on={view === 'build'} onclick={() => (view = 'build')}>Build</button>
+      <button class:on={view === 'deck'} onclick={() => (view = 'deck')}>Deck</button>
+    </div>
     <select value={deck.format} onchange={(e) => setFormat(e.currentTarget.value)} aria-label="Format">
       {#each game.formats as f (f.id)}<option value={f.id}>{f.name}</option>{/each}
     </select>
-    <button class="ghost danger small" onclick={removeDeck}>Delete</button>
+    <button class="ghost danger small del" onclick={removeDeck}>Delete</button>
   </header>
 
-  <nav class="tabs">
-    <button class:on={tab === 'search'} onclick={() => (tab = 'search')}>Search</button>
-    <button class:on={tab === 'deck'} onclick={() => (tab = 'deck')}>
-      Deck <span class="num">{deckCount}</span>
-      {#if issues.some((i) => i.level === 'error')}<span class="dot err"></span>{:else if issues.length}<span class="dot warn"></span>{/if}
-    </button>
-  </nav>
+  {#if view === 'deck'}
+    <DeckView {game} {index} {deck} {format} {issues} {...shared} onGoldfish={game.goldfish ? () => (goldfish = true) : undefined} />
+  {:else}
+    <nav class="tabs">
+      <button class:on={tab === 'search'} onclick={() => (tab = 'search')}>Search</button>
+      <button class:on={tab === 'deck'} onclick={() => (tab = 'deck')}>
+        Deck <span class="num">{deckCount}</span>
+        {#if issues.some((i) => i.level === 'error')}<span class="dot err"></span>{:else if issues.length}<span class="dot warn"></span>{/if}
+      </button>
+    </nav>
 
-  <div class="layout">
-    <section class="search" class:hide={tab !== 'search'}>
-      <SearchPanel {game} {data} {index} {deck} {format} bind:onlyZone onAdd={add} onRemove={remove} onOpen={(c) => (viewing = c)} />
-    </section>
-    <section class="deck" class:hide={tab !== 'deck'}>
-      <DeckPanel {game} {index} {deck} {format} {issues} {changed} {say} onAdd={add} onRemove={remove} onOpen={(c) => (viewing = c)} onPick={pick} />
-    </section>
-  </div>
+    <div class="layout">
+      <section class="search" class:hide={tab !== 'search'}>
+        <SearchPanel {game} {data} {index} {deck} {format} bind:onlyZone bind:target onAdd={add} onRemove={remove} onConsider={consider} onOpen={(c) => (viewing = c)} />
+      </section>
+      <section class="deck" class:hide={tab !== 'deck'}>
+        <DeckPanel {game} {index} {deck} {format} {issues} {...shared} />
+      </section>
+    </div>
+  {/if}
 
   {#if viewing}
-    <CardModal {game} {deck} {format} card={viewing} onAdd={add} onRemove={remove} onClose={() => (viewing = null)} />
+    <CardModal {game} {deck} {format} card={viewing} {...shared} onClose={() => (viewing = null)} />
+  {/if}
+
+  {#if goldfish && game.goldfish}
+    <Goldfish {game} {index} {deck} {format} config={game.goldfish} onClose={() => (goldfish = false)} />
   {/if}
 
   {#if toast}<div class="toast" role="status">{toast}</div>{/if}
@@ -178,6 +220,25 @@
   .name:focus {
     border-color: var(--line);
   }
+  .views {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    flex: none;
+  }
+  .views button {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 7px 12px;
+  }
+  .views button.on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
   .tabs {
     display: none;
   }
@@ -185,6 +246,10 @@
     display: flex;
     flex-direction: column;
     height: 100dvh;
+  }
+  .editor.deckview {
+    display: block;
+    height: auto;
   }
   .layout {
     flex: 1;
@@ -234,12 +299,19 @@
 
   @media (max-width: 860px) {
     header {
+      position: static;
       flex-wrap: wrap;
       padding: 8px 12px;
     }
     .name {
       order: 3;
       flex-basis: 100%;
+    }
+    .views {
+      margin-left: auto;
+    }
+    .del {
+      padding: 7px 6px;
     }
     .tabs {
       display: grid;

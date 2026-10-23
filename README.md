@@ -5,7 +5,13 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 
 | App | Game | Formats |
 |---|---|---|
-| [Milk's SWU Deck Builder](apps/swu) | Star Wars: Unlimited | Order 66, Twin Suns, Premier |
+| [Milk's SWU Deck Builder](apps/swu) | Star Wars: Unlimited | Order 66, Twin Suns, Premier, Eternal |
+
+Every deck has a Build view (search and list side by side) and a Deck view (the deck as card images, with stats).
+You can also keep a Considering list of maybe-adds and maybe-cuts, goldfish sample hands, and buy missing cards through a pre-filled TCGplayer Mass Entry link.
+
+**Keeping SWU legal:** Premier rotation and the suspended lists live at the top of `apps/swu/src/game.ts` (`PREMIER_SETS`, `SUSPENDED`).
+Update them when Fantasy Flight announces changes. That's at least once a set, and the next rotation is expected in Feb 2027.
 
 ## How it's put together
 

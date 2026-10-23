@@ -9,6 +9,8 @@ export interface Card {
   price: number | null;
   /** TCGplayer product id of that printing. */
   tcg?: number;
+  /** That product's exact TCGplayer name, which is what Mass Entry matches on. */
+  tcgName?: string;
   /** Ids of the card's other printings, so imported decklists naming a reprint still resolve. */
   alt?: string[];
 }
@@ -37,6 +39,8 @@ export interface Deck {
   updated: number;
   /** Cards per zone, e.g. { leader: [...], base: [...], main: [...], side: [...] }. */
   zones: Record<string, Entry[]>;
+  /** Cards you're thinking about adding (or cutting). Not part of the deck: no size, rules or price. */
+  considering?: Entry[];
   notes?: string;
 }
 
@@ -80,6 +84,23 @@ export interface FilterDef<C extends Card> {
   options?: (string | number)[];
 }
 
+export interface GoldfishDef {
+  /** Cards in the opening hand. */
+  hand: number;
+  /** Free mulligans allowed before the first turn. */
+  mulligans: number;
+  /** Cards drawn at the start of each later turn (or round). */
+  draw: number;
+  /** What a turn is called ("Round"). */
+  turn: string;
+  /** Cards put face down as resources from the opening hand, and how many you may add each turn after. */
+  resources?: { setup: number; perTurn: number };
+  /** Zones shuffled into the draw pile. */
+  zones: string[];
+  /** One line of reminders shown at the top, e.g. how setup works. */
+  note?: string;
+}
+
 export interface Imported {
   name?: string;
   /** Format id, when the decklist says. */
@@ -101,6 +122,8 @@ export interface GameDef<C extends Card> {
   zoneFor(card: C, format: FormatDef): string | null;
   /** Most copies of this card allowed, counted across all zones. Caps the + button. */
   maxCopies(card: C, format: FormatDef): number;
+  /** Why a card isn't allowed in this format at all (rotated out, suspended), or null if it is. */
+  illegal?(card: C, format: FormatDef): string | null;
   validate(deck: Deck, cards: CardIndex<C>, format: FormatDef): Issue[];
 
   /** Display name, e.g. "Darth Vader, Dark Lord of the Sith". */
@@ -118,8 +141,17 @@ export interface GameDef<C extends Card> {
   /** Everything free-text search should match. */
   searchText(card: C): string;
   filters: FilterDef<C>[];
+  /** Filter ids to break the main deck down by in the Deck view (e.g. aspects, arenas). */
+  stats?: string[];
   /** An optional search toggle such as "Fits my leaders": cards that suit what's already in the deck. */
-  fit?: { label: string; test(card: C, deck: Deck, cards: CardIndex<C>, format: FormatDef): boolean };
+  fit?: {
+    label: string;
+    /** Tag shown on considered cards that don't fit, e.g. "Aspect penalty +2". Null when it fits. */
+    miss(card: C, deck: Deck, cards: CardIndex<C>): string | null;
+    test(card: C, deck: Deck, cards: CardIndex<C>, format: FormatDef): boolean;
+  };
+  /** Solo test draws ("goldfishing"). Without it the Goldfish button is hidden. */
+  goldfish?: GoldfishDef;
 
   /** What import accepts, shown in the import dialog. */
   importHint: string;
@@ -129,6 +161,6 @@ export interface GameDef<C extends Card> {
   exportDeck(deck: Deck, cards: CardIndex<C>): string;
   /** Parses an exported decklist. Throws with a readable message if it can't. */
   importDeck(text: string, cards: CardIndex<C>, formats: FormatDef[]): Imported;
-  /** One line for TCGplayer's Mass Entry box. */
-  massEntryLine(card: C, qty: number): string;
+  /** TCGplayer's product line name for Mass Entry, e.g. "Star Wars Unlimited". */
+  tcgProductLine: string;
 }

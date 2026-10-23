@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCard, changeFormat, cycleOwned, indexCards, massEntry, newDeck, setQty, totals } from './deck';
+import { addCard, changeFormat, considerToDeck, cycleOwned, deckToConsider, indexCards, massEntry, newDeck, setConsidering, setQty, totals } from './deck';
 import { sizeIssues } from './rules';
 import type { Card, FormatDef, GameDef } from './types';
 
@@ -19,14 +19,14 @@ const game = {
   label: (c: Card) => c.name,
   zoneFor: () => 'main',
   maxCopies: () => 2,
-  massEntryLine: (c: Card, n: number) => `${n} ${c.name}`,
+  tcgProductLine: 'Test Game',
 } as unknown as GameDef<Card>;
 
 const data = {
   updated: '',
   cards: [
-    { id: 'A_1', name: 'Alpha', price: 1.5, alt: ['B_9'] },
-    { id: 'A_2', name: 'Beta', price: null },
+    { id: 'A_1', name: 'Alpha', price: 1.5, alt: ['B_9'], tcgName: 'Alpha - TCG' },
+    { id: 'A_2', name: 'Beta', price: null, tcgName: 'Beta' },
     { id: 'A_3', name: 'Gamma', price: 10 },
   ],
 };
@@ -68,7 +68,36 @@ describe('deck', () => {
     expect(t.total).toBeCloseTo(13);
     expect(t.toFinish).toBeCloseTo(11.5);
     expect(t.unpriced).toBe(1);
-    expect(massEntry(game, d, cards).split('\n')).toEqual(['1 Alpha', '1 Beta', '1 Gamma']);
+  });
+
+  it('builds a filled-in TCGplayer Mass Entry link from exact TCGplayer names', () => {
+    const d = newDeck(format, 'test');
+    setQty(d, 'main', 'A_1', 2);
+    setQty(d, 'main', 'A_2', 1);
+    setQty(d, 'side', 'A_3', 1);
+    cycleOwned(d, 'main', 'A_2');
+    const m = massEntry(game, d, cards);
+    expect(m.lines).toEqual(['2 Alpha - TCG']);
+    expect(m.unlisted).toEqual(['Gamma']);
+    expect(m.url).toBe('https://www.tcgplayer.com/massentry?productline=Test%20Game&c=2%20Alpha%20-%20TCG');
+  });
+
+  it('moves cards between the deck and Considering, keeping owned copies', () => {
+    const d = newDeck(format, 'test');
+    setConsidering(d, 'A_1', 2);
+    expect(considerToDeck(game, d, format, alpha)).toBeNull();
+    expect(d.zones.main).toEqual([{ id: 'A_1', qty: 1, owned: 0 }]);
+    expect(d.considering).toEqual([{ id: 'A_1', qty: 1, owned: 0 }]);
+    setQty(d, 'main', 'A_1', 2);
+    expect(considerToDeck(game, d, format, alpha)).toMatch(/Max 2/);
+
+    cycleOwned(d, 'main', 'A_1');
+    cycleOwned(d, 'main', 'A_1');
+    deckToConsider(d, 'main', 'A_1');
+    expect(d.zones.main).toEqual([{ id: 'A_1', qty: 1, owned: 1 }]);
+    expect(d.considering).toEqual([{ id: 'A_1', qty: 2, owned: 1 }]);
+    // Considering never counts toward the deck's price.
+    expect(totals(d, cards).cards).toBe(1);
   });
 
   it('owned cycles through the copies and back to none', () => {

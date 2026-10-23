@@ -1,6 +1,6 @@
 <script lang="ts" generics="C extends Card">
   // Card search: free text, filter chips from the game, sort, and a grid of cards to add.
-  import { copies } from '../deck';
+  import { consideringCount, copies } from '../deck';
   import type { Card, CardData, CardIndex, Deck, FormatDef, GameDef } from '../types';
   import { money } from '../util';
 
@@ -11,8 +11,10 @@
     deck,
     format,
     onlyZone = $bindable(),
+    target = $bindable(),
     onAdd,
     onRemove,
+    onConsider,
     onOpen,
   }: {
     game: GameDef<C>;
@@ -21,8 +23,11 @@
     deck: Deck;
     format: FormatDef;
     onlyZone: string | null;
+    /** Whether + adds to the deck or to Considering. */
+    target: 'deck' | 'considering';
     onAdd: (c: C) => void;
     onRemove: (c: C) => void;
+    onConsider: (c: C, n?: number) => void;
     onOpen: (c: C) => void;
   } = $props();
 
@@ -35,6 +40,8 @@
   let sort = $state<keyof typeof SORTS>('cost');
   let limit = $state(PAGE);
   let showFilters = $state(false);
+  let showIllegal = $state(false);
+  const maybe = $derived(target === 'considering' && !onlyZone);
 
   // Precomputed once per data load: search text and each filter's values per card.
   const prepared = $derived(
@@ -60,13 +67,16 @@
   const zoneName = $derived(onlyZone ? (format.zones.find((z) => z.id === onlyZone)?.name ?? onlyZone) : '');
   const activeCount = $derived(Object.values(sel).reduce((n, v) => n + v.length, 0) + (fit ? 1 : 0));
 
-  const results = $derived.by(() => {
+  // Cards the format doesn't allow (rotated out, suspended) are hidden unless asked for.
+  const illegalIds = $derived(game.illegal ? new Set(data.cards.filter((c) => game.illegal!(c, format)).map((c) => c.id)) : new Set<string>());
+  const found = $derived.by(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const active = Object.entries(sel).filter(([, v]) => v.length);
     // Plain browsing shows deck cards only; leaders and bases come up when you search or filter,
     // or pick an empty slot in the deck.
     const command = new Set(format.zones.filter((z) => z.command).map((z) => z.id));
     const browsing = !words.length && !active.length;
+    let hidden = 0;
     const out = prepared
       .filter((p) => {
         const zone = game.zoneFor(p.c, format);
@@ -74,6 +84,10 @@
         for (const w of words) if (!p.text.includes(w)) return false;
         for (const [id, v] of active) if (!p.values[id].some((x) => v.includes(x))) return false;
         if (fit && game.fit && !game.fit.test(p.c, deck, index, format)) return false;
+        if (!showIllegal && illegalIds.has(p.c.id)) {
+          hidden++;
+          return false;
+        }
         return true;
       })
       .map((p) => p.c);
@@ -85,12 +99,13 @@
       priceUp: (a, b) => price(a, true) - price(b, true) || byName(a, b),
       priceDown: (a, b) => price(b, false) - price(a, false) || byName(a, b),
     };
-    return out.sort(cmp[sort]);
+    return { cards: out.sort(cmp[sort]), hidden };
   });
+  const results = $derived(found.cards);
 
   // New search or filters start back at the first page.
   $effect(() => {
-    void [q, sel, fit, sort, onlyZone];
+    void [q, sel, fit, sort, onlyZone, showIllegal];
     limit = PAGE;
   });
 
@@ -108,6 +123,10 @@
 </script>
 
 <div class="bar">
+  <div class="target" role="group" aria-label="Add cards to">
+    <button class:on={target === 'deck'} onclick={() => (target = 'deck')}>Deck</button>
+    <button class:on={target === 'considering'} class="maybe" onclick={() => (target = 'considering')}>Considering</button>
+  </div>
   <input type="search" placeholder="Search name, text, traits…" bind:value={q} aria-label="Search cards" />
   <select bind:value={sort} aria-label="Sort">
     {#each Object.entries(SORTS) as [k, v] (k)}<option value={k}>{v}</option>{/each}
@@ -139,21 +158,40 @@
   {/if}
   <span class="num">{results.length.toLocaleString()} cards</span>
   {#if activeCount || q || onlyZone}<button class="ghost small" onclick={clearAll}>Clear</button>{/if}
+  {#if found.hidden || showIllegal}
+    <button class="ghost small illegal-toggle" onclick={() => (showIllegal = !showIllegal)}>
+      {showIllegal ? `Hide cards not legal in ${format.name}` : `+${found.hidden} not legal in ${format.name}`}
+    </button>
+  {/if}
 </div>
+{#if maybe}
+  <p class="maybe-note small">Adding to <strong>Considering</strong>. These sit beside the deck until you move them in.</p>
+{/if}
 
 <div class="grid">
   {#each results.slice(0, limit) as c (c.id)}
     {@const img = game.image(c)}
     {@const n = copies(deck, c.id)}
+    {@const m = consideringCount(deck, c.id)}
     {@const max = game.maxCopies(c, format)}
-    <div class="tile" class:wide={img.landscape} class:in={n > 0}>
+    {@const bad = illegalIds.has(c.id)}
+    <div class="tile" class:wide={img.landscape} class:in={n > 0} class:considered={m > 0 && !n} class:bad>
       <button class="art" onclick={() => onOpen(c)} title={game.label(c)}>
         <img src={img.src} alt={game.label(c)} loading="lazy" decoding="async" />
+        {#if m}<span class="badge maybe-badge num">?{m}</span>{/if}
+        {#if bad}<span class="badge bad-badge">Not legal</span>{/if}
       </button>
       <div class="controls">
-        <button class="step" onclick={() => onRemove(c)} disabled={!n} aria-label="Remove one {game.label(c)}">−</button>
-        <span class="count num" class:zero={!n}>{n}{max < 99 ? `/${max}` : ''}</span>
-        <button class="step" onclick={() => onAdd(c)} disabled={n >= max} aria-label="Add one {game.label(c)}">+</button>
+        {#if maybe}
+          <button class="step" onclick={() => onConsider(c, -1)} disabled={!m} aria-label="Consider one fewer {game.label(c)}">−</button>
+          <span class="count num maybe-count" class:zero={!m}>?{m}</span>
+          <button class="step maybe-step" onclick={() => onConsider(c)} aria-label="Consider {game.label(c)}">+</button>
+          <span class="small muted num">{n ? `${n} in deck` : ''}</span>
+        {:else}
+          <button class="step" onclick={() => onRemove(c)} disabled={!n} aria-label="Remove one {game.label(c)}">−</button>
+          <span class="count num" class:zero={!n}>{n}{max < 99 ? `/${max}` : ''}</span>
+          <button class="step" onclick={() => onAdd(c)} disabled={n >= max || bad} aria-label="Add one {game.label(c)}">+</button>
+        {/if}
         <span class="price num small">{money(c.price)}</span>
       </div>
     </div>
@@ -180,6 +218,75 @@
   }
   .bar input {
     flex: 1;
+  }
+  .target {
+    display: flex;
+    flex: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .target button {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 7px 10px;
+  }
+  .target button.on {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .target button.maybe.on {
+    background: var(--maybe);
+    color: var(--maybe-ink);
+  }
+  .maybe-note {
+    margin: -4px 16px 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--maybe-bg);
+    border-left: 3px solid var(--maybe);
+  }
+  .art {
+    position: relative;
+  }
+  .badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .maybe-badge {
+    background: var(--maybe);
+    color: var(--maybe-ink);
+  }
+  .bad-badge {
+    top: auto;
+    bottom: 6px;
+    left: 6px;
+    right: auto;
+    background: var(--error);
+    color: #1a0505;
+  }
+  .considered .art {
+    outline-color: var(--maybe);
+  }
+  .bad .art img {
+    opacity: 0.45;
+  }
+  .maybe-count {
+    color: var(--maybe);
+  }
+  .maybe-step {
+    border-color: var(--maybe);
+  }
+  .illegal-toggle {
+    margin-left: auto;
   }
   .toggle.on {
     border-color: var(--accent);
@@ -308,6 +415,19 @@
   @media (max-width: 560px) {
     .grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .bar {
+      flex-wrap: wrap;
+    }
+    .bar input {
+      order: -1;
+      flex-basis: 100%;
+    }
+    .target {
+      flex: 1;
+    }
+    .target button {
+      flex: 1;
     }
   }
 </style>
