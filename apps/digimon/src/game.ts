@@ -231,4 +231,5 @@ export const game: GameDef<DigiCard> = {
   exportDeck,
   importDeck,
   tcgProductLine: 'Digimon Card Game',
+  massEntryById: true,
 };

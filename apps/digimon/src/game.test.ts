@@ -84,11 +84,11 @@ describe('Digimon decklists', () => {
     expect(tts.zones.main).toEqual([{ id: 'BT2-010', qty: 1, owned: 0 }]);
   });
 
-  it('names the exact printing for TCGplayer Mass Entry', () => {
-    const c = card('BT11-046', 'Digimon', { name: 'Agumon', tcgName: 'Agumon', tcgSet: 'BT-11', tcgNum: 'BT11-046' });
+  it('sends TCGplayer Mass Entry the exact product id, since many cards share a name', () => {
+    const c = card('BT11-046', 'Digimon', { name: 'Agumon', tcg: 515700, tcgName: 'Agumon' });
     const all = indexCards({ updated: '', cards: [c] });
     const d = newDeck(std, 'test');
     setQty(d, 'main', c.id, 2);
-    expect(massEntry(game, d, all).lines).toEqual(['2 Agumon [BT-11] BT11-046']);
+    expect(massEntry(game, d, all).lines).toEqual(['2-515700']);
   });
 });

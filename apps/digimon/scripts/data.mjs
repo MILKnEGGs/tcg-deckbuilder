@@ -65,7 +65,7 @@ await pool(groups, 4, async (g) => {
       if (!raw) continue;
       // "BT26-052 C" -> "BT26-052"; a few promos are written "P - 214 P".
       const num = raw.replace(/\s*-\s*/g, '-').split(' ')[0].toUpperCase();
-      products.push({ id: p.productId, name: p.name, set: g.abbreviation.trim(), released: g.publishedOn.slice(0, 10), num, numText: raw.split(' ')[0], price: price.get(p.productId) ?? null });
+      products.push({ id: p.productId, name: p.name, released: g.publishedOn.slice(0, 10), num, numText: raw.split(' ')[0], price: price.get(p.productId) ?? null });
     }
   } catch (err) {
     console.warn(`  skipped ${g.name}: ${err.message}`);
@@ -138,8 +138,6 @@ for (const c of all) {
     price: cheapest.price,
     tcg: cheapest.id,
     tcgName: cheapest.name,
-    tcgSet: cheapest.set,
-    tcgNum: cheapest.numText,
   });
 }
 cards.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));

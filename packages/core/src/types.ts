@@ -11,12 +11,6 @@ export interface Card {
   tcg?: number;
   /** That product's exact TCGplayer name, which is what Mass Entry matches on. */
   tcgName?: string;
-  /**
-   * TCGplayer set code and card number, for games where many cards share a name (Digimon's dozens
-   * of "Agumon"). Mass Entry then gets "1 Agumon [BT-11] BT11-046" and can't pick the wrong one.
-   */
-  tcgSet?: string;
-  tcgNum?: string;
   /** Ids of the card's other printings, so imported decklists naming a reprint still resolve. */
   alt?: string[];
 }
@@ -175,4 +169,10 @@ export interface GameDef<C extends Card> {
   importDeck(text: string, cards: CardIndex<C>, formats: FormatDef[]): Imported;
   /** TCGplayer's product line name for Mass Entry, e.g. "Star Wars Unlimited". */
   tcgProductLine: string;
+  /**
+   * Send Mass Entry TCGplayer product ids ("4-515604") instead of names. Mass Entry accepts this
+   * undocumented form (it's in the page's own line parser) and it can't pick the wrong card, which
+   * matters where many cards share a name (Digimon's dozens of "Agumon"). The pasted list shows ids.
+   */
+  massEntryById?: boolean;
 }
