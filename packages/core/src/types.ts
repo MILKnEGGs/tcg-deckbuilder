@@ -11,6 +11,12 @@ export interface Card {
   tcg?: number;
   /** That product's exact TCGplayer name, which is what Mass Entry matches on. */
   tcgName?: string;
+  /**
+   * TCGplayer set code and card number, for games where many cards share a name (Digimon's dozens
+   * of "Agumon"). Mass Entry then gets "1 Agumon [BT-11] BT11-046" and can't pick the wrong one.
+   */
+  tcgSet?: string;
+  tcgNum?: string;
   /** Ids of the card's other printings, so imported decklists naming a reprint still resolve. */
   alt?: string[];
 }
@@ -84,7 +90,7 @@ export interface FilterDef<C extends Card> {
   options?: (string | number)[];
 }
 
-export interface GoldfishDef {
+export interface GoldfishDef<C extends Card = Card> {
   /** Cards in the opening hand. */
   hand: number;
   /** Free mulligans allowed before the first turn. */
@@ -95,10 +101,16 @@ export interface GoldfishDef {
   turn: string;
   /** Cards put face down as resources from the opening hand, and how many you may add each turn after. */
   resources?: { setup: number; perTurn: number };
+  /** Face-down cards dealt from the deck once setup is done (Digimon's 5 security cards). */
+  stack?: { name: string; count: number };
+  /** A separate deck from another zone, played from the top (Digimon's Digi-Egg deck). */
+  side?: { zone: string; name: string; action: string; into: string };
   /** Zones shuffled into the draw pile. */
   zones: string[];
   /** One line of reminders shown at the top, e.g. how setup works. */
   note?: string;
+  /** What the odds table counts; defaults to "cost N or less" for 1–4. */
+  odds?: { label: string; test(card: C): boolean }[];
 }
 
 export interface Imported {
@@ -151,7 +163,7 @@ export interface GameDef<C extends Card> {
     test(card: C, deck: Deck, cards: CardIndex<C>, format: FormatDef): boolean;
   };
   /** Solo test draws ("goldfishing"). Without it the Goldfish button is hidden. */
-  goldfish?: GoldfishDef;
+  goldfish?: GoldfishDef<C>;
 
   /** What import accepts, shown in the import dialog. */
   importHint: string;

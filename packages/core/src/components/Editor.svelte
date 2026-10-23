@@ -34,8 +34,10 @@
         // Make sure every zone of the format exists, even for decks saved by an older version.
         const f = game.formats.find((x) => x.id === d.format) ?? game.formats[0];
         for (const z of f.zones) d.zones[z.id] ??= [];
-        // Decks with their leaders/bases chosen open on the deck itself, for refining.
-        if (f.zones.some((z) => z.command && d.zones[z.id].length)) view = 'deck';
+        // Decks under way open on the deck itself, for refining: once leaders/bases are chosen,
+        // or, in games without them, once there are any cards.
+        const command = f.zones.filter((z) => z.command);
+        if (command.length ? command.some((z) => d.zones[z.id].length) : f.zones.some((z) => d.zones[z.id].length)) view = 'deck';
         deck = d;
       } else missing = true;
     });

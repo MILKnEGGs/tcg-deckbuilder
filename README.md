@@ -6,12 +6,16 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 | App | Game | Formats |
 |---|---|---|
 | [Milk's SWU Deck Builder](apps/swu) | Star Wars: Unlimited | Order 66, Twin Suns, Premier, Eternal |
+| [Milk's Digimon Deck Builder](apps/digimon) | Digimon Card Game (English cards) | Standard |
 
 Every deck has a Build view (search and list side by side) and a Deck view (the deck as card images, with stats).
 You can also keep a Considering list of maybe-adds and maybe-cuts, goldfish sample hands, and buy missing cards through a pre-filled TCGplayer Mass Entry link.
 
 **Keeping SWU legal:** Premier rotation and the suspended lists live at the top of `apps/swu/src/game.ts` (`PREMIER_SETS`, `SUSPENDED`).
 Update them when Fantasy Flight announces changes. That's at least once a set, and the next rotation is expected in Feb 2027.
+
+**Keeping Digimon legal:** the banned, restricted and banned-pair lists are at the top of `apps/digimon/src/game.ts`, copied from the official list at world.digimoncard.com/rule/restriction_card/.
+Card data comes from [digimoncard.io](https://digimoncard.io). A card counts as released in English once TCGplayer lists it, and it can be added from its release date.
 
 ## How it's put together
 

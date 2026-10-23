@@ -191,7 +191,7 @@ export function massEntry<C extends Card>(game: GameDef<C>, deck: Deck, cards: C
   const unlisted: string[] = [];
   for (const [id, n] of need) {
     const c = cards.get(id);
-    if (c?.tcgName) lines.push(`${n} ${c.tcgName}`);
+    if (c?.tcgName) lines.push(`${n} ${c.tcgName}${c.tcgSet ? ` [${c.tcgSet}]` : ''}${c.tcgSet && c.tcgNum ? ` ${c.tcgNum}` : ''}`);
     else unlisted.push(c ? game.label(c) : id);
   }
   const url = lines.length

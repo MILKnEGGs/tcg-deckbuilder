@@ -1,10 +1,10 @@
 <script lang="ts" generics="C extends Card">
   // Goldfish: draw sample hands and step through turns alone, plus the odds of early plays.
   import { onMount } from 'svelte';
-  import { atLeastOne, mulligan, move, nextTurn, pile, setupDone, start, unplay, type Fish } from '../goldfish';
+  import { atLeastOne, flipStack, fromSide, mulligan, move, nextTurn, pile, setupDone, start, unplay, type Fish } from '../goldfish';
   import type { Card, CardIndex, Deck, FormatDef, GameDef, GoldfishDef } from '../types';
 
-  let { game, index, deck, format, config, onClose }: { game: GameDef<C>; index: CardIndex<C>; deck: Deck; format: FormatDef; config: GoldfishDef; onClose: () => void } = $props();
+  let { game, index, deck, format, config, onClose }: { game: GameDef<C>; index: CardIndex<C>; deck: Deck; format: FormatDef; config: GoldfishDef<C>; onClose: () => void } = $props();
 
   let dialog = $state<HTMLDialogElement>();
   // svelte-ignore state_referenced_locally
@@ -22,17 +22,26 @@
   const ready = $derived(setupDone(fish, config));
   const needResources = $derived(config.resources ? Math.max(0, config.resources.setup - fish.resources.length) : 0);
 
-  // Odds of having a card at or under each cost, in the opening hand and by the next two turns.
+  // Odds of holding at least one card of each kind (by default: cost N or less), in the opening hand
+  // and by the next two turns.
   const odds = $derived.by(() => {
     const ids = pile(deck, config.zones);
-    const costs = ids.map((id) => {
-      const c = index.get(id);
-      return c ? game.cost(c) : null;
-    });
+    const tests =
+      config.odds ??
+      [1, 2, 3, 4].map((k) => ({
+        label: `Cost ${k} or less`,
+        test: (c: C) => {
+          const cost = game.cost(c);
+          return cost != null && cost <= k;
+        },
+      }));
     const seen = [config.hand, config.hand + config.draw, config.hand + config.draw * 2];
-    return [1, 2, 3, 4].map((k) => {
-      const hits = costs.filter((c) => c != null && c <= k).length;
-      return { k, hits, p: seen.map((s) => atLeastOne(ids.length, hits, s)) };
+    return tests.map((t) => {
+      const hits = ids.filter((id) => {
+        const c = index.get(id);
+        return !!c && t.test(c);
+      }).length;
+      return { label: t.label, hits, p: seen.map((s) => atLeastOne(ids.length, hits, s)) };
     });
   });
   const pct = (p: number) => `${Math.round(p * 100)}%`;
@@ -53,7 +62,7 @@
   <header>
     <h2>🐟 Goldfish</h2>
     <span class="muted small">
-      {fish.turn ? `${config.turn} ${fish.turn}` : 'Setup'} · {fish.library.length} in deck · {fish.resources.length} resources
+      {fish.turn ? `${config.turn} ${fish.turn}` : 'Setup'} · {fish.library.length} in deck{config.resources ? ` · ${fish.resources.length} resources` : ''}
     </span>
     <span class="spacer"></span>
     <button onclick={() => { fish = start(deck, config); picked = null; }}>New hand</button>
@@ -105,9 +114,31 @@
       {/if}
     </section>
 
-    <div class="piles">
+    {#if config.side || config.stack}
+      <div class="extra">
+        {#if config.side}
+          <section>
+            <h3>{config.side.name} <span class="num muted">{fish.side.length}</span></h3>
+            <button onclick={() => (fish = fromSide(fish, config))} disabled={!fish.side.length || fish.turn === 0}>{config.side.action}</button>
+            <span class="muted small">Goes to {config.side.into}.</span>
+          </section>
+        {/if}
+        {#if config.stack}
+          <section>
+            <h3>{config.stack.name} <span class="num muted">{fish.turn ? fish.stack.length : config.stack.count}</span></h3>
+            <div class="facedown">
+              {#each Array.from({ length: fish.turn ? fish.stack.length : 0 }) as _, i (i)}<span class="back"></span>{/each}
+              {#if !fish.turn}<span class="muted small">Dealt when the first {config.turn.toLowerCase()} starts.</span>{/if}
+            </div>
+            <button onclick={() => (fish = flipStack(fish, config))} disabled={!fish.stack.length}>Flip the top card</button>
+          </section>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="piles" class:no-res={!config.resources}>
       <section>
-        <h3>In play <span class="num muted">{fish.played.length}</span></h3>
+        <h3>{config.side?.into ? `In play / ${config.side.into}` : 'In play'} <span class="num muted">{fish.played.length}</span></h3>
         <div class="cards small-cards">
           {#each fish.played as id, i (id + ':' + i)}
             <button class="card" onclick={() => (fish = unplay(fish, 'played', i))} title="Tap to return to hand"><img src={img(id)} alt="" /></button>
@@ -139,18 +170,18 @@
         <h3>Odds of an early play</h3>
         <table>
           <thead>
-            <tr><th>Cost</th><th>Opening hand</th><th>By {config.turn.toLowerCase()} 2</th><th>By {config.turn.toLowerCase()} 3</th></tr>
+            <tr><th>Card</th><th>Opening hand</th><th>By {config.turn.toLowerCase()} 2</th><th>By {config.turn.toLowerCase()} 3</th></tr>
           </thead>
           <tbody>
-            {#each odds as o (o.k)}
+            {#each odds as o (o.label)}
               <tr>
-                <td>{o.k} or less <span class="muted small">({o.hits})</span></td>
+                <td>{o.label} <span class="muted small">({o.hits})</span></td>
                 {#each o.p as p, i (i)}<td class="num">{pct(p)}</td>{/each}
               </tr>
             {/each}
           </tbody>
         </table>
-        <p class="muted small">Chance of holding at least one such card (before resourcing), counting {config.draw} draws per {config.turn.toLowerCase()}.</p>
+        <p class="muted small">Chance of holding at least one such card{config.resources ? ' (before resourcing)' : ''}, counting {config.draw} {config.draw === 1 ? 'draw' : 'draws'} per {config.turn.toLowerCase()}.</p>
       </section>
       <section class="log">
         <h3>Log</h3>
@@ -272,6 +303,40 @@
     grid-template-columns: 2fr 1fr 1fr;
     gap: 14px;
   }
+  .piles.no-res {
+    grid-template-columns: 2fr 1fr;
+  }
+  .extra {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .extra section {
+    background: var(--panel-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .extra h3 {
+    flex-basis: 100%;
+    margin: 0;
+  }
+  .facedown {
+    display: flex;
+    gap: 4px;
+    flex-basis: 100%;
+    min-height: 20px;
+  }
+  .back {
+    width: 22px;
+    height: 30px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 3px, var(--panel) 3px, var(--panel) 6px);
+    opacity: 0.8;
+  }
   .piles section,
   .bottom section {
     background: var(--panel-2);
@@ -317,6 +382,8 @@
       width: 56px;
     }
     .piles,
+    .piles.no-res,
+    .extra,
     .bottom {
       grid-template-columns: 1fr;
     }

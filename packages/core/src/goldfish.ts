@@ -9,6 +9,10 @@ export interface Fish {
   resources: string[];
   played: string[];
   discard: string[];
+  /** Face-down stack dealt at the start (security), top first. */
+  stack: string[];
+  /** The separate side deck (Digi-Eggs), top first. */
+  side: string[];
   /** 0 while setting up (opening hand, mulligan, choosing resources). */
   turn: number;
   mulligansLeft: number;
@@ -33,7 +37,34 @@ export const pile = (deck: Deck, zones: string[]) => zones.flatMap((z) => (deck.
 export function start(deck: Deck, cfg: GoldfishDef, random = Math.random): Fish {
   const library = shuffle(pile(deck, cfg.zones), random);
   const hand = library.splice(0, cfg.hand);
-  return { library, hand, resources: [], played: [], discard: [], turn: 0, mulligansLeft: cfg.mulligans, resourcesLeft: cfg.resources?.setup ?? 0, log: [`Drew an opening hand of ${hand.length}`] };
+  const side = cfg.side ? shuffle(pile(deck, [cfg.side.zone]), random) : [];
+  return {
+    library,
+    hand,
+    resources: [],
+    played: [],
+    discard: [],
+    stack: [],
+    side,
+    turn: 0,
+    mulligansLeft: cfg.mulligans,
+    resourcesLeft: cfg.resources?.setup ?? 0,
+    log: [`Drew an opening hand of ${hand.length}`],
+  };
+}
+
+/** Plays the top card of the side deck (e.g. hatches a Digi-Egg). */
+export function fromSide(f: Fish, cfg: GoldfishDef): Fish {
+  if (!cfg.side || !f.side.length) return f;
+  const [top, ...rest] = f.side;
+  return { ...f, side: rest, played: [...f.played, top], log: [...f.log, `${cfg.side.action} (${rest.length} left)`] };
+}
+
+/** Turns the top card of the face-down stack over into the discard pile (e.g. a security check). */
+export function flipStack(f: Fish, cfg: GoldfishDef): Fish {
+  if (!cfg.stack || !f.stack.length) return f;
+  const [top, ...rest] = f.stack;
+  return { ...f, stack: rest, discard: [...f.discard, top], log: [...f.log, `Flipped a ${cfg.stack.name.toLowerCase()} card (${rest.length} left)`] };
 }
 
 export function mulligan(f: Fish, cfg: GoldfishDef, random = Math.random): Fish {
@@ -68,7 +99,13 @@ export function unplay(f: Fish, from: 'played' | 'discard' | 'resources', i: num
 export const setupDone = (f: Fish, cfg: GoldfishDef) => f.turn > 0 || f.resources.length >= (cfg.resources?.setup ?? 0);
 
 export function nextTurn(f: Fish, cfg: GoldfishDef): Fish {
-  if (f.turn === 0) return { ...f, turn: 1, resourcesLeft: 0, log: [...f.log, `${cfg.turn} 1: ${f.resources.length} resources, ${f.hand.length} cards in hand`] };
+  if (f.turn === 0) {
+    // Setup ends: deal the face-down stack (security) from the top of the deck.
+    const library = [...f.library];
+    const stack = cfg.stack ? library.splice(0, cfg.stack.count) : [];
+    const parts = [cfg.resources ? `${f.resources.length} resources` : '', cfg.stack ? `${stack.length} ${cfg.stack.name.toLowerCase()}` : '', `${f.hand.length} cards in hand`];
+    return { ...f, library, stack, turn: 1, resourcesLeft: 0, log: [...f.log, `${cfg.turn} 1: ${parts.filter(Boolean).join(', ')}`] };
+  }
   const library = [...f.library];
   const drawn = library.splice(0, cfg.draw);
   const turn = f.turn + 1;

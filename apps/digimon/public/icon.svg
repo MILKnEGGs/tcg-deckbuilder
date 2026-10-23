@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#120d0a"/>
+  <g stroke="#ff7a1a" stroke-width="6" opacity="0.35" fill="none">
+    <path d="M60 140h70v-40h60"/>
+    <path d="M452 380h-70v40h-60"/>
+    <path d="M60 400h40v-60"/>
+    <path d="M452 120h-40v60"/>
+  </g>
+  <rect x="150" y="128" width="170" height="238" rx="18" fill="#271d17" stroke="#ff7a1a" stroke-width="10" transform="rotate(-12 235 247)"/>
+  <rect x="196" y="140" width="170" height="238" rx="18" fill="#1c1511" stroke="#ff7a1a" stroke-width="10" transform="rotate(8 281 259)"/>
+  <text x="281" y="290" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="92" fill="#ff7a1a" transform="rotate(8 281 259)">M</text>
+</svg>
