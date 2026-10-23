@@ -1,0 +1,9 @@
+/* Union Arena look: dark violet with an Arena purple accent (yellow is kept for Considering). */
+:root {
+  --bg: #110b17;
+  --panel: #1a1122;
+  --panel-2: #24182f;
+  --line: #3a2a4a;
+  --accent: #a855f7;
+  --accent-ink: #14051f;
+}
