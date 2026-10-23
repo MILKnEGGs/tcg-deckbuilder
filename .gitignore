@@ -1,0 +1,9 @@
+node_modules
+dist
+dev-dist
+*.local
+.vs
+obj
+bin
+# Card data is downloaded fresh by "npm run data" (and daily by the deploy workflow).
+apps/*/public/data

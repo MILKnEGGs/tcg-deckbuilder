@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.7173973">
+  <PropertyGroup>
+    <!-- F5 runs the SWU app, then opens the browser from .vscode/launch.json with the debugger attached. -->
+    <StartupCommand>npm run dev</StartupCommand>
+    <!-- Build (Ctrl+Shift+B) runs "npm run build"; every app ends up under dist. -->
+    <BuildOutputFolder>$(MSBuildProjectDirectory)\dist</BuildOutputFolder>
+    <!-- Show the Vitest tests in Test Explorer. -->
+    <JavaScriptTestFramework>Vitest</JavaScriptTestFramework>
+    <JavaScriptTestRoot>.\</JavaScriptTestRoot>
+  </PropertyGroup>
+</Project>

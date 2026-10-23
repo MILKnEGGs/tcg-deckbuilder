@@ -1,0 +1,17 @@
+{
+  "name": "swu",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "data": "node scripts/data.mjs",
+    "build": "svelte-check --threshold error && vite build",
+    "check": "svelte-check",
+    "preview": "vite preview",
+    "icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg"
+  },
+  "dependencies": {
+    "@milk/core": "*"
+  }
+}

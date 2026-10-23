@@ -1,0 +1,12 @@
+{
+  "name": "@milk/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared deck builder: deck model, validation helpers, storage, pricing and the whole UI. Each game app supplies a GameDef.",
+  "exports": {
+    "./*.svelte": "./src/components/*.svelte",
+    "./style.css": "./src/style.css",
+    "./*": "./src/*.ts"
+  }
+}

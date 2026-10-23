@@ -1,0 +1,28 @@
+{
+  "name": "tcg-deckbuilder",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/swu",
+    "data": "npm run data --workspaces --if-present",
+    "test": "vitest run",
+    "check": "npm run check --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present && node scripts/assemble.mjs"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "@vite-pwa/assets-generator": "^2.0.0",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.7",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.5"
+  }
+}
