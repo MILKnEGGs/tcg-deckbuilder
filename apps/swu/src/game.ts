@@ -62,8 +62,21 @@ export const formats: FormatDef[] = [
 const label = (c: SwuCard) => (c.sub ? `${c.name}, ${c.sub}` : c.name);
 const isDeckCard = (c: SwuCard) => c.type !== 'Leader' && c.type !== 'Base';
 
+/**
+ * A card's own copy limit, e.g. Swarming Vulture Droid: "A deck can have up to 15 copies of this card."
+ * Printed limits override the format's (including singleton formats).
+ */
+export function printedLimit(card: SwuCard): number | null {
+  const text = card.text ?? '';
+  if (/any number of copies of this card/i.test(text)) return 99;
+  const m = /deck can (?:have|include|contain) up to (\d+) copies of this card/i.exec(text);
+  return m ? Number(m[1]) : null;
+}
+
 function maxCopies(card: SwuCard, format: FormatDef): number {
   if (!isDeckCard(card)) return 1;
+  const printed = printedLimit(card);
+  if (printed != null) return printed;
   switch (format.id) {
     case 'twinsuns':
       return 1;

@@ -75,6 +75,23 @@ describe('Order 66', () => {
   });
 });
 
+describe('printed copy limits', () => {
+  const vulture = card('VULTURE', 'Unit', ['Villainy'], { text: 'A deck can have up to 15 copies of this card.' });
+
+  it('override the format, singleton formats included', () => {
+    for (const f of formats) {
+      const d = newDeck(f, 'test');
+      for (let i = 0; i < 15; i++) expect(addCard(game, d, f, vulture)).toBeNull();
+      expect(addCard(game, d, f, vulture)).toMatch(/Max 15/);
+    }
+  });
+
+  it('only apply to cards that say so', () => {
+    expect(game.maxCopies(units[0], fmt('premier'))).toBe(3);
+    expect(game.maxCopies(units[0], fmt('order66'))).toBe(1);
+  });
+});
+
 describe('aspects', () => {
   it('charges 2 per icon the leaders and base do not provide, counting repeats', () => {
     expect(aspectPenalty(event, ['Command'])).toBe(2);
