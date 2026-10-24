@@ -33,13 +33,14 @@
   } = $props();
 
   const PAGE = 90;
-  const SORTS = { cost: 'Cost', name: 'Name', priceUp: 'Price ↑', priceDown: 'Price ↓' } as const;
 
   let q = $state('');
   let sel = $state<Record<string, (string | number)[]>>({});
   let fit = $state(false);
   let toggled = $state<Record<string, boolean>>({});
-  let sort = $state<keyof typeof SORTS>('cost');
+  // Sort by name (the default), cost, price or any filter, in the filter's own order; `desc` flips it.
+  let sort = $state('name');
+  let desc = $state(false);
   let limit = $state(PAGE);
   let showFilters = $state(false);
   let showIllegal = $state(false);
@@ -66,11 +67,21 @@
     ),
   );
 
+  const sorts = $derived.by(() => {
+    const out = [{ id: 'name', label: 'Name' }, ...(game.noCostCurve ? [] : [{ id: 'cost', label: 'Cost' }]), { id: 'price', label: 'Price' }];
+    for (const f of game.filters) if (!out.some((o) => o.label.toLowerCase() === f.label.toLowerCase())) out.push({ id: `f:${f.id}`, label: f.label });
+    return out;
+  });
+  /** Each filter value's position in its chip order, for sorting by that filter. */
+  const rank = $derived(Object.fromEntries(game.filters.map((f) => [f.id, new Map(options[f.id].map((o, i) => [o, i]))])));
+  const sorted = $derived(sort !== 'name' || desc);
+
   const zoneName = $derived(onlyZone ? (format.zones.find((z) => z.id === onlyZone)?.name ?? onlyZone) : '');
   const activeCount = $derived(Object.values(sel).reduce((n, v) => n + v.length, 0) + (fit ? 1 : 0) + Object.values(toggled).filter(Boolean).length);
 
   // Cards the format doesn't allow (rotated out, suspended) are hidden unless asked for.
   const illegalIds = $derived(game.illegal ? new Set(data.cards.filter((c) => game.illegal!(c, format)).map((c) => c.id)) : new Set<string>());
+  type P = (typeof prepared)[number];
   const found = $derived.by(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const active = Object.entries(sel).filter(([, v]) => v.length);
@@ -92,23 +103,31 @@
           return false;
         }
         return true;
-      })
-      .map((p) => p.c);
-    const byName = (a: C, b: C) => game.label(a).localeCompare(game.label(b));
-    const price = (c: C, up: boolean) => c.price ?? (up ? Infinity : -Infinity);
-    const cmp: Record<keyof typeof SORTS, (a: C, b: C) => number> = {
-      cost: (a, b) => (game.cost(a) ?? -1) - (game.cost(b) ?? -1) || byName(a, b),
-      name: byName,
-      priceUp: (a, b) => price(a, true) - price(b, true) || byName(a, b),
-      priceDown: (a, b) => price(b, false) - price(a, false) || byName(a, b),
+      });
+    const byName = (a: P, b: P) => game.label(a.c).localeCompare(game.label(b.c));
+    // The sort key; cards without one (no price, no value for that filter) always go last.
+    const key = (p: P): number | null => {
+      if (sort === 'cost') return game.cost(p.c);
+      if (sort === 'price') return p.c.price ?? null;
+      const order = rank[sort.slice(2)];
+      const at = (p.values[sort.slice(2)] ?? []).map((v) => order?.get(v)).filter((i): i is number => i != null);
+      return at.length ? Math.min(...at) : null;
     };
-    return { cards: out.sort(cmp[sort]), hidden };
+    const dir = desc ? -1 : 1;
+    const cmp = (a: P, b: P) => {
+      if (sort === 'name') return dir * byName(a, b);
+      const ka = key(a);
+      const kb = key(b);
+      if (ka == null || kb == null) return ka == null && kb == null ? byName(a, b) : ka == null ? 1 : -1;
+      return dir * (ka - kb) || byName(a, b);
+    };
+    return { cards: out.sort(cmp).map((p) => p.c), hidden };
   });
   const results = $derived(found.cards);
 
   // New search or filters start back at the first page.
   $effect(() => {
-    void [q, sel, fit, toggled, sort, onlyZone, showIllegal];
+    void [q, sel, fit, toggled, sort, desc, onlyZone, showIllegal];
     limit = PAGE;
   });
 
@@ -118,6 +137,8 @@
   }
 
   function clearAll() {
+    sort = 'name';
+    desc = false;
     sel = {};
     fit = false;
     toggled = {};
@@ -132,9 +153,12 @@
     <button class:on={target === 'considering'} class="maybe" onclick={() => (target = 'considering')}>Considering</button>
   </div>
   <input type="search" placeholder="Search name, text, traits…" bind:value={q} aria-label="Search cards" />
-  <select bind:value={sort} aria-label="Sort">
-    {#each Object.entries(SORTS) as [k, v] (k)}<option value={k}>{v}</option>{/each}
+  <select bind:value={sort} aria-label="Sort by" title="Sort by">
+    {#each sorts as o (o.id)}<option value={o.id}>{o.id === 'name' ? 'Name' : `By ${o.label.toLowerCase()}`}</option>{/each}
   </select>
+  <button class="dir" onclick={() => (desc = !desc)} title={desc ? 'Descending: tap for ascending' : 'Ascending: tap for descending'} aria-label={desc ? 'Sorted descending' : 'Sorted ascending'}>
+    {desc ? '↓' : '↑'}
+  </button>
   <button class="toggle" class:on={showFilters} onclick={() => (showFilters = !showFilters)}>
     Filters{activeCount ? ` (${activeCount})` : ''}
   </button>
@@ -164,7 +188,7 @@
     <button class="chip on" onclick={() => (onlyZone = null)}>Choosing: {zoneName} ✕</button>
   {/if}
   <span class="num">{results.length.toLocaleString()} cards</span>
-  {#if activeCount || q || onlyZone}<button class="ghost small" onclick={clearAll}>Clear</button>{/if}
+  {#if activeCount || q || onlyZone || sorted}<button class="ghost small" onclick={clearAll}>Clear</button>{/if}
   {#if found.hidden || showIllegal}
     <button class="ghost small illegal-toggle" onclick={() => (showIllegal = !showIllegal)}>
       {showIllegal ? `Hide cards not legal in ${format.name}` : `+${found.hidden} not legal in ${format.name}`}
@@ -226,6 +250,15 @@
   }
   .bar input {
     flex: 1;
+    min-width: 0;
+  }
+  .bar select {
+    max-width: 9.5em;
+  }
+  .dir {
+    flex: none;
+    width: 34px;
+    padding: 0;
   }
   .target {
     display: flex;
@@ -435,12 +468,21 @@
     .bar {
       flex-wrap: wrap;
     }
+    /* Phones: search and Filters on top; Deck/Considering and the sort below. */
     .bar input {
+      order: -2;
+      flex: 1 1 60%;
+    }
+    .bar .toggle {
       order: -1;
-      flex-basis: 100%;
     }
     .target {
-      flex: 1;
+      flex: none;
+    }
+    .bar select {
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: none;
     }
     .target button {
       flex: 1;
