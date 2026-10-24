@@ -38,8 +38,10 @@
   let sel = $state<Record<string, (string | number)[]>>({});
   let fit = $state(false);
   let toggled = $state<Record<string, boolean>>({});
-  // Sort by name (the default), cost, price or any filter, in the filter's own order; `desc` flips it.
-  let sort = $state('name');
+  // Sort by cost (the default where cards have one, else name), name, price or any filter, in the filter's
+  // own order; `desc` flips it.
+  const defaultSort = () => (game.noCostCurve ? 'name' : 'cost');
+  let sort = $state(defaultSort());
   let desc = $state(false);
   let limit = $state(PAGE);
   let showFilters = $state(false);
@@ -74,7 +76,7 @@
   });
   /** Each filter value's position in its chip order, for sorting by that filter. */
   const rank = $derived(Object.fromEntries(game.filters.map((f) => [f.id, new Map(options[f.id].map((o, i) => [o, i]))])));
-  const sorted = $derived(sort !== 'name' || desc);
+  const sorted = $derived(sort !== defaultSort() || desc);
 
   const zoneName = $derived(onlyZone ? (format.zones.find((z) => z.id === onlyZone)?.name ?? onlyZone) : '');
   const activeCount = $derived(Object.values(sel).reduce((n, v) => n + v.length, 0) + (fit ? 1 : 0) + Object.values(toggled).filter(Boolean).length);
@@ -137,7 +139,7 @@
   }
 
   function clearAll() {
-    sort = 'name';
+    sort = defaultSort();
     desc = false;
     sel = {};
     fit = false;
