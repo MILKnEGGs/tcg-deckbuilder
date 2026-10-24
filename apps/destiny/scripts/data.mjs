@@ -58,7 +58,6 @@ const html = (s) =>
 const [raw, sets, formats] = await Promise.all([getJson(`${API}/cards`), getJson(`${API}/sets`), getJson(`${API}/formats`)]);
 console.log(`ARH: ${raw.length} cards, ${sets.length} sets, ${formats.length} formats`);
 const setByCode = new Map(sets.map((s) => [s.code, s]));
-const officialSets = new Set(sets.filter((s) => s.position < 100).map((s) => s.code));
 
 // TCGplayer prices for official cards, by set name + collector number.
 const tcg = new Map(); // "Awakenings|21" -> { id, name, price }
@@ -83,6 +82,9 @@ console.log(`TCGCSV: ${tcg.size} official Destiny products`);
 
 // The far side of flip cards ("13003B") isn't a card you build with; the A side carries it.
 const cards = raw.filter((c) => !/B$/.test(c.code));
+const backs = new Map(raw.filter((c) => /B$/.test(c.code)).map((c) => [c.code.replace(/B$/, 'A'), c]));
+/** Fantasy Flight's own free print-and-play set (12 double-sided cards, July 2020); TCGplayer never sold it. */
+const FFG_PNP_SETS = new Set(['TR']);
 const byCode = new Map(cards.map((c) => [c.code, c]));
 // Fold reprints into the original.
 const original = (c) => {
@@ -121,6 +123,8 @@ for (const [code, list] of printings) {
     if (hit && (!best || (hit.price ?? Infinity) < (best.price ?? Infinity))) best = hit;
   }
 
+  const back = backs.get(code);
+  const sold = setCodes.some((s) => TCG_SETS[s]);
   out.push({
     id: code,
     alt: codes.filter((x) => x !== code).length ? codes.filter((x) => x !== code) : undefined,
@@ -141,9 +145,12 @@ for (const [code, list] of printings) {
     set: c.set_code,
     sets: setCodes,
     released: setCodes.map((s) => setByCode.get(s)?.available).filter(Boolean).sort()[0],
-    pnp: setCodes.some((s) => officialSets.has(s)) ? undefined : true,
+    pnp: sold ? undefined : true,
+    ffg: !sold && setCodes.some((s) => FFG_PNP_SETS.has(s)) ? true : undefined,
     flip: c.flip_card || undefined,
     img: c.imagesrc,
+    // The far side of a double-sided card (Transformations, flip cards): shown with "Show back" and searchable.
+    back: back ? { name: back.name, sub: back.subtitle || undefined, type: back.type_code, img: back.imagesrc, text: html(back.text) } : undefined,
     // Per-format rules, keyed by format code.
     legal: Object.keys(per((f) => codes.some((x) => list.find((p) => p.code === x && f.sets.has(p.set_code))) || undefined)),
     banned: Object.keys(per((f) => codes.some((x) => f.banned.has(x)) || undefined)),

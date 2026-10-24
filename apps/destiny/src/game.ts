@@ -36,8 +36,12 @@ export interface SwdCard extends Card {
   set: string;
   sets: string[];
   released?: string;
-  /** Only in community (ARH) sets: free print-and-play, not sold. */
+  /** Not sold: free print-and-play from the community (ARH) sets, or from Fantasy Flight when `ffg`. */
   pnp?: true;
+  /** Fantasy Flight's own print-and-play (Transformations). */
+  ffg?: true;
+  /** The other side of a double-sided card. */
+  back?: { name: string; sub?: string; type: string; img: string; text?: string };
   flip?: true;
   img: string;
   /** Per-format rules, by format code. */
@@ -348,7 +352,7 @@ export const game: GameDef<SwdCard> = {
   group: (c) => PLURAL[c.type] ?? cap(c.type),
   groups: ['Characters', 'Plots', 'Battlefields', 'Upgrades', 'Supports', 'Events', 'Downgrades'],
   cost: (c) => c.cost,
-  image: (c) => ({ src: c.img, landscape: c.type === 'battlefield' }),
+  image: (c) => ({ src: c.img, back: c.back?.img, landscape: c.type === 'battlefield' }),
   // Upgrades print their name partway down, so label the Deck view's stacks.
   labelStacks: true,
   qtyLabel: (c, qty) => (c.type !== 'character' || qty < 2 ? null : c.unique ? (qty === 2 ? 'Elite' : `${qty} dice`) : `×${qty}`),
@@ -370,11 +374,16 @@ export const game: GameDef<SwdCard> = {
     if (c.limit !== 2 && !['character', 'plot', 'battlefield'].includes(c.type)) rows.push(['Deck limit', String(c.limit)]);
     rows.push(['Sets', c.sets.join(', ')]);
     rows.push(['Legal in', c.legal.map((f) => formats.find((x) => x.id === f)?.name ?? f).join(', ') || 'None']);
-    rows.push(['Price', c.pnp ? 'Print & play (free from swdrenewedhope.com)' : money(c.price)]);
+    if (c.back) rows.push(['Other side', [c.back.name, c.back.sub].filter(Boolean).join(', ') + ` (${c.back.type})`]);
+    rows.push(['Price', c.ffg ? 'Print & play (free from Fantasy Flight)' : c.pnp ? 'Print & play (free from swdrenewedhope.com)' : money(c.price)]);
     return rows;
   },
-  text: (c) => (c.text ? [c.text] : []),
-  searchText: (c) => [c.name, c.sub, c.type, c.affiliation, c.color, ...c.subtypes, c.text, ...c.sets].filter(Boolean).join(' ').toLowerCase(),
+  text: (c) => [...(c.text ? [c.text] : []), ...(c.back?.text ? [`Other side (${c.back.name}): ${c.back.text}`] : [])],
+  searchText: (c) =>
+    [c.name, c.sub, c.type, c.affiliation, c.color, ...c.subtypes, c.text, ...c.sets, c.back?.name, c.back?.sub, c.back?.text, c.pnp ? 'print and play pnp' : '']
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase(),
   filters: [
     { id: 'affiliation', label: 'Side', values: (c) => [cap(c.affiliation)], options: ['Hero', 'Villain', 'Neutral'] },
     { id: 'color', label: 'Color', values: (c) => [cap(c.color)], options: ['Red', 'Blue', 'Yellow', 'Gray'] },
@@ -382,6 +391,7 @@ export const game: GameDef<SwdCard> = {
     { id: 'dice', label: 'Dice', values: (c) => [c.sides ? 'Has a die' : 'No die'], options: ['Has a die', 'No die'] },
     { id: 'cost', label: 'Cost', values: (c) => (c.cost == null ? [] : [c.cost >= 6 ? '6+' : String(c.cost)]), options: ['0', '1', '2', '3', '4', '5', '6+'] },
     { id: 'set', label: 'Set', values: (c) => c.sets },
+    { id: 'source', label: 'Source', values: (c) => [c.ffg ? 'FFG print & play' : c.pnp ? 'Community print & play' : 'Sold (TCGplayer)'], options: ['Sold (TCGplayer)', 'FFG print & play', 'Community print & play'] },
   ],
   stats: ['color', 'type', 'dice'],
 
