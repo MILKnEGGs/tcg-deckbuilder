@@ -183,10 +183,12 @@
     </div>
 
     <div class="stats">
-      <section>
-        <h3>Cost curve</h3>
-        <CostCurve {game} {index} {deck} />
-      </section>
+      {#if !game.noCostCurve}
+        <section>
+          <h3>Cost curve</h3>
+          <CostCurve {game} {index} {deck} />
+        </section>
+      {/if}
       {#each breakdown as b (b.label)}
         <section>
           <h3>{b.label}</h3>

@@ -145,10 +145,12 @@
   {/if}
 {/each}
 
-<section class="zone">
-  <h3>Cost curve</h3>
-  <CostCurve {game} {index} {deck} />
-</section>
+{#if !game.noCostCurve}
+  <section class="zone">
+    <h3>Cost curve</h3>
+    <CostCurve {game} {index} {deck} />
+  </section>
+{/if}
 
 <DeckActions {game} {index} {deck} {format} {changed} {say} />
 

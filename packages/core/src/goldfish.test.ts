@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atLeastOne, bumpCounter, move, mulligan, nextTurn, setupDone, start } from './goldfish';
+import { atLeastOne, bumpCounter, flipStack, move, mulligan, nextTurn, setupDone, start } from './goldfish';
 import type { Deck, GoldfishDef } from './types';
 
 const cfg: GoldfishDef = { hand: 6, mulligans: 1, draw: 2, turn: 'Round', resources: { setup: 2, perTurn: 1 }, zones: ['main'] };
@@ -81,6 +81,28 @@ describe('goldfish', () => {
     expect(f.hand).toHaveLength(7);
     expect(f.counter).toBe(25);
     expect(bumpCounter(f, uvs, -3).counter).toBe(22);
+  });
+
+  it('redraws the opening hand until it holds a required card, and can take prizes into hand', () => {
+    const basic = { id: 'C0', name: 'Basic', price: 0 };
+    const idx = new Map([['C0', basic]]);
+    const one: Deck = { ...deck, zones: { main: [{ id: 'C0', qty: 1, owned: 0 }, ...deck.zones.main.slice(1)] } };
+    const pk: GoldfishDef = {
+      hand: 7,
+      mulligans: 0,
+      draw: 1,
+      turn: 'Turn',
+      zones: ['main'],
+      openingNeeds: { label: 'Basic Pokémon', test: (c) => c.name === 'Basic' },
+      stack: { name: 'Prizes', count: 6, action: 'Take a prize', to: 'hand' },
+    };
+    let f = start(one, pk, idx);
+    expect(f.hand).toContain('C0');
+    f = nextTurn(f, pk);
+    expect(f.stack).toHaveLength(6);
+    const before = f.hand.length;
+    f = flipStack(f, pk);
+    expect([f.stack.length, f.hand.length]).toEqual([5, before + 1]);
   });
 
   it('computes the odds of drawing at least one of a card', () => {

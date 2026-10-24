@@ -92,10 +92,9 @@
 
     .app {
       display: flex;
-      align-items: center;
-      gap: 16px;
+      flex-direction: column;
       height: 100%;
-      padding: 16px;
+      overflow: hidden;
       border: 1px solid var(--border);
       border-top: 4px solid var(--accent);
       border-radius: 14px;
@@ -111,11 +110,34 @@
       outline-offset: 2px;
     }
 
-    .app img {
+    /* The game's own logo on a dark banner, tinted with the app's color, so games are easy to spot. */
+    .logo {
+      display: grid;
+      place-items: center;
+      height: 96px;
+      padding: 0 24px;
+      background: radial-gradient(ellipse at 50% 130%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%), #0b1020;
+    }
+    .logo img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 68px;
+    }
+    /* Black logos (One Piece, Destiny) turned white for the dark banner. */
+    .logo img.dark { filter: invert(1); }
+    .info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px 16px;
+    }
+    .icon {
       flex: none;
-      width: 56px;
-      height: 56px;
-      border-radius: 12px;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
     }
 
     .app h2 {
@@ -174,86 +196,122 @@
           <span style="background: #22c55e"></span>
           <span style="background: #14b8a6"></span>
           <span style="background: #ec4899"></span>
+          <span style="background: #6366f1"></span>
         </div>
       </div>
     </header>
 
-    <!-- To add a game: copy an <li>, change the folder name, title, description, formats and accent color. -->
+    <!-- To add a game: copy an <li>, change the folder name, logo (in site/logos), title, description, formats and accent color. -->
     <ul class="grid">
       <li>
         <a class="app" href="swu/" style="--accent: #5aa9ff">
-          <img src="swu/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's SWU Deck Builder</h2>
-            <p>Star Wars: Unlimited</p>
-            <div class="formats"><span>Order 66</span><span>Twin Suns</span><span>Premier</span><span>Eternal</span></div>
+          <div class="logo"><img src="logos/swu.png" alt="Star Wars: Unlimited"></div>
+          <div class="info">
+            <img class="icon" src="swu/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's SWU Deck Builder</h2>
+              <p>Star Wars: Unlimited</p>
+              <div class="formats"><span>Order 66</span><span>Twin Suns</span><span>Premier</span><span>Eternal</span></div>
+            </div>
           </div>
         </a>
       </li>
       <li>
         <a class="app" href="digimon/" style="--accent: #ff7a1a">
-          <img src="digimon/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's Digimon Deck Builder</h2>
-            <p>Digimon Card Game</p>
-            <div class="formats"><span>Standard</span></div>
+          <div class="logo"><img src="logos/digimon.png" alt="Digimon Card Game"></div>
+          <div class="info">
+            <img class="icon" src="digimon/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's Digimon Deck Builder</h2>
+              <p>Digimon Card Game</p>
+              <div class="formats"><span>Standard</span></div>
+            </div>
           </div>
         </a>
       </li>
       <li>
         <a class="app" href="onepiece/" style="--accent: #ef4444">
-          <img src="onepiece/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's One Piece Deck Builder</h2>
-            <p>One Piece Card Game</p>
-            <div class="formats"><span>Standard</span><span>Extra Regulation</span></div>
+          <div class="logo"><img src="logos/onepiece.png" alt="One Piece Card Game" class="dark"></div>
+          <div class="info">
+            <img class="icon" src="onepiece/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's One Piece Deck Builder</h2>
+              <p>One Piece Card Game</p>
+              <div class="formats"><span>Standard</span><span>Extra Regulation</span></div>
+            </div>
           </div>
         </a>
       </li>
       <li>
         <a class="app" href="unionarena/" style="--accent: #a855f7">
-          <img src="unionarena/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's Union Arena Deck Builder</h2>
-            <p>Union Arena</p>
-            <div class="formats"><span>Official</span></div>
+          <div class="logo"><img src="logos/unionarena.png" alt="Union Arena"></div>
+          <div class="info">
+            <img class="icon" src="unionarena/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's Union Arena Deck Builder</h2>
+              <p>Union Arena</p>
+              <div class="formats"><span>Official</span></div>
+            </div>
           </div>
         </a>
       </li>
       <li>
         <a class="app" href="universus/" style="--accent: #22c55e">
-          <img src="universus/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's UniVersus Deck Builder</h2>
-            <p>UniVersus</p>
-            <div class="formats"><span>Standard</span><span>Retro</span></div>
+          <div class="logo"><img src="logos/universus.svg" alt="UniVersus"></div>
+          <div class="info">
+            <img class="icon" src="universus/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's UniVersus Deck Builder</h2>
+              <p>UniVersus</p>
+              <div class="formats"><span>Standard</span><span>Retro</span></div>
+            </div>
           </div>
         </a>
       </li>
       <li>
         <a class="app" href="destiny/" style="--accent: #14b8a6">
-          <img src="destiny/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's Destiny Deck Builder</h2>
-            <p>Star Wars: Destiny</p>
-            <div class="formats"><span>ARH Standard</span><span>Galactic Infinite</span><span>FFG formats</span></div>
+          <div class="logo"><img src="logos/destiny.png" alt="Star Wars: Destiny" class="dark"></div>
+          <div class="info">
+            <img class="icon" src="destiny/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's Destiny Deck Builder</h2>
+              <p>Star Wars: Destiny</p>
+              <div class="formats"><span>ARH Standard</span><span>Galactic Infinite</span><span>FFG formats</span></div>
+            </div>
           </div>
         </a>
       </li>
       <li>
         <a class="app" href="lorcana/" style="--accent: #ec4899">
-          <img src="lorcana/pwa-192x192.png" alt="">
-          <div>
-            <h2>Milk's Lorcana Deck Builder</h2>
-            <p>Disney Lorcana</p>
-            <div class="formats"><span>Core</span><span>Infinity</span></div>
+          <div class="logo"><img src="logos/lorcana.png" alt="Disney Lorcana"></div>
+          <div class="info">
+            <img class="icon" src="lorcana/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's Lorcana Deck Builder</h2>
+              <p>Disney Lorcana</p>
+              <div class="formats"><span>Core</span><span>Infinity</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="app" href="pokemon/" style="--accent: #6366f1">
+          <div class="logo"><img src="logos/pokemon.svg" alt="Pokémon Trading Card Game"></div>
+          <div class="info">
+            <img class="icon" src="pokemon/pwa-192x192.png" alt="">
+            <div>
+              <h2>Milk's Pokémon Deck Builder</h2>
+              <p>Pokémon TCG</p>
+              <div class="formats"><span>Standard</span><span>Expanded</span></div>
+            </div>
           </div>
         </a>
       </li>
     </ul>
 
     <footer>
-      Prices from TCGplayer, updated daily · UniVersus attuned symbols from <a href="https://uvsultra.online/">UVS Ultra</a> · Destiny cards from <a href="https://swdrenewedhope.com/">A Renewed Hope</a> · Lorcana cards from <a href="https://lorcast.com/">Lorcast</a> · <a href="../">Milk's Apps</a>
+      Prices from TCGplayer, updated daily · UniVersus attuned symbols from <a href="https://uvsultra.online/">UVS Ultra</a> · Destiny cards from <a href="https://swdrenewedhope.com/">A Renewed Hope</a> · Lorcana cards from <a href="https://lorcast.com/">Lorcast</a> · Pokémon cards from <a href="https://tcgdex.dev/">TCGdex</a> · <a href="../">Milk's Apps</a><br>
+      Game names and logos are trademarks of their owners; this is an unofficial fan project.
     </footer>
   </main>
 </body>

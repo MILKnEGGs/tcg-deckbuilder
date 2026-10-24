@@ -47,10 +47,26 @@ export function shuffle<T>(list: T[], random = Math.random): T[] {
 export const pile = (deck: Deck, zones: string[]) => zones.flatMap((z) => (deck.zones[z] ?? []).flatMap((e) => Array.from({ length: e.qty }, () => e.id)));
 
 export function start<C extends Card>(deck: Deck, cfg: Def<C>, cards: CardIndex<C> = new Map(), random = Math.random): Fish {
-  const library = shuffle(pile(deck, cfg.zones), random);
+  let library = shuffle(pile(deck, cfg.zones), random);
   const handSize = cfg.handFrom?.(deck, cards) ?? cfg.hand;
-  const hand = library.splice(0, handSize);
+  let hand = library.splice(0, handSize);
   const side = cfg.side ? shuffle(pile(deck, [cfg.side.zone]), random) : [];
+  const log = [`Drew an opening hand of ${hand.length}`];
+  // Redraw until the hand holds a required card (a Basic Pokémon), if the deck has one at all.
+  const needs = cfg.openingNeeds;
+  const fits = (id: string) => {
+    const c = cards.get(id);
+    return !!c && !!needs?.test(c);
+  };
+  if (needs && [...hand, ...library].some(fits)) {
+    let redraws = 0;
+    while (!hand.some(fits) && redraws < 50) {
+      library = shuffle([...library, ...hand], random);
+      hand = library.splice(0, handSize);
+      redraws++;
+    }
+    if (redraws) log.push(`No ${needs.label} in hand: reshuffled and redrew ${redraws} time${redraws === 1 ? '' : 's'}`);
+  }
   return {
     handSize,
     counter: 0,
@@ -66,7 +82,7 @@ export function start<C extends Card>(deck: Deck, cfg: Def<C>, cards: CardIndex<
     turn: 0,
     mulligansLeft: cfg.mulligans,
     resourcesLeft: cfg.resources?.setup ?? 0,
-    log: [`Drew an opening hand of ${hand.length}`],
+    log,
   };
 }
 
@@ -77,11 +93,13 @@ export function fromSide(f: Fish, cfg: GoldfishDef): Fish {
   return { ...f, side: rest, played: [...f.played, top], log: [...f.log, `${cfg.side.action} (${rest.length} left)`] };
 }
 
-/** Turns the top card of the face-down stack over into the discard pile (e.g. a security check). */
+/** Takes the top card of the face-down stack: into the discard (a security check) or the hand (a prize). */
 export function flipStack(f: Fish, cfg: GoldfishDef): Fish {
   if (!cfg.stack || !f.stack.length) return f;
   const [top, ...rest] = f.stack;
-  return { ...f, stack: rest, discard: [...f.discard, top], log: [...f.log, `Flipped a ${cfg.stack.name.toLowerCase()} card (${rest.length} left)`] };
+  const name = cfg.stack.name.toLowerCase();
+  if (cfg.stack.to === 'hand') return { ...f, stack: rest, hand: [...f.hand, top], log: [...f.log, `Took a ${name.replace(/s$/, '')} card (${rest.length} left)`] };
+  return { ...f, stack: rest, discard: [...f.discard, top], log: [...f.log, `Flipped a ${name} card (${rest.length} left)`] };
 }
 
 export function mulligan(f: Fish, random = Math.random): Fish {

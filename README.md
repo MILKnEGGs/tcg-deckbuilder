@@ -11,6 +11,7 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 | [Milk's Union Arena Deck Builder](apps/unionarena) | Union Arena (English cards) | Official |
 | [Milk's UniVersus Deck Builder](apps/universus) | UniVersus (and Universal Fighting System) | Standard, Retro |
 | [Milk's Lorcana Deck Builder](apps/lorcana) | Disney Lorcana | Core, Infinity |
+| [Milk's Pokémon Deck Builder](apps/pokemon) | Pokémon TCG | Standard, Expanded |
 | [Milk's Destiny Deck Builder](apps/destiny) | Star Wars: Destiny (official + A Renewed Hope community sets) | ARH Standard, Galactic Infinite, FFG Standard, FFG Trilogy, FFG Infinite |
 
 Every deck has a Build view (search and list side by side) and a Deck view (the deck as card images, with stats).
@@ -27,6 +28,9 @@ Standard rotation is worked out in `apps/onepiece/scripts/data.mjs`: Block 1 is 
 Card data and pictures both come from TCGplayer (via TCGCSV).
 
 **Keeping Lorcana legal:** nothing to maintain by hand. Each card's Core and Infinity legality (rotation and bans) comes from [Lorcast](https://lorcast.com/) daily.
+
+**Keeping Pokémon legal:** Standard legality (rotation by regulation mark) comes from [TCGdex](https://tcgdex.dev/) daily.
+The Expanded banned list is at the top of `apps/pokemon/src/game.ts` (`EXPANDED_BANS`), from pokemon.com/us/play-pokemon/about/pokemon-tcg-banned-card-list. Update it when Play! Pokémon announces bans.
 
 **Keeping Destiny legal:** nothing to maintain by hand. Cards, legal sets, bans, the restricted list and pairs, and per-format point changes all come from the [A Renewed Hope](https://swdrenewedhope.com/) database each day.
 Community sets are free print-and-play; TCGplayer prices exist only for official Fantasy Flight cards.

@@ -162,7 +162,7 @@
               {#each Array.from({ length: fish.turn ? fish.stack.length : 0 }) as _, i (i)}<span class="back"></span>{/each}
               {#if !fish.turn}<span class="muted small">Dealt when the first {config.turn.toLowerCase()} starts.</span>{/if}
             </div>
-            <button onclick={() => (fish = flipStack(fish, config))} disabled={!fish.stack.length}>Flip the top card</button>
+            <button onclick={() => (fish = flipStack(fish, config))} disabled={!fish.stack.length}>{config.stack.action ?? 'Flip the top card'}</button>
           </section>
         {/if}
       </div>

@@ -112,7 +112,19 @@ export interface GoldfishDef<C extends Card = Card> {
    * Face-down cards dealt from the deck once setup is done: Digimon's 5 security cards, or One Piece's
    * life cards, whose number comes from the leader.
    */
-  stack?: { name: string; count: number; countFrom?(deck: Deck, cards: CardIndex<C>): number };
+  stack?: {
+    name: string;
+    count: number;
+    countFrom?(deck: Deck, cards: CardIndex<C>): number;
+    /** Button label for taking the top card ("Take a prize"), and where it goes (default: discard). */
+    action?: string;
+    to?: 'hand' | 'discard';
+  };
+  /**
+   * The opening hand must hold one of these (Pokémon: a Basic Pokémon). Without one, the hand is
+   * reshuffled and redrawn automatically, and the log says how many times.
+   */
+  openingNeeds?: { label: string; test(card: C): boolean };
   /**
    * A number tracked through the game: One Piece's DON!! (`first` on turn 1, then +`perTurn`, up to `max`),
    * or a health total that only changes by hand (`perTurn` 0, starting value from the deck).
@@ -184,6 +196,8 @@ export interface GameDef<C extends Card> {
   /** Cost for sorting and the cost curve; null for cards without one. */
   cost(card: C): number | null;
   image(card: C): { src: string; back?: string; landscape?: boolean };
+  /** Cards have no single cost (Pokémon), so the cost curve is left out. */
+  noCostCurve?: boolean;
   /** The printed name isn't at the top of the card (UniVersus), so the Deck view labels its stacks. */
   labelStacks?: boolean;
   /** What 2+ copies of a leader-type card mean, e.g. "Elite" for a Destiny character with two dice. */
