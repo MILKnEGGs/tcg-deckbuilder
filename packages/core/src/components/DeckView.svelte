@@ -160,6 +160,7 @@
               >
                 <img src={game.image(c).src} alt={game.label(c)} loading="lazy" decoding="async" />
                 <span class="qty num">{e.qty}×</span>
+                {#if game.labelStacks}<span class="cap">{game.label(c)}</span>{/if}
                 {#if e.owned >= e.qty}<span class="own" title="Owned">✓</span>{:else if e.owned}<span class="own some" title="Owned {e.owned} of {e.qty}">{e.owned}/{e.qty}</span>{/if}
                 {#if miss}<span class="miss">{miss}</span>{/if}
               </button>
@@ -365,6 +366,22 @@
     color: #fff;
     font-weight: 700;
     font-size: 0.85rem;
+  }
+  .cap {
+    position: absolute;
+    top: 6px;
+    left: 40px;
+    right: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgb(0 0 0 / 0.78);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .maybe .qty {
     background: var(--maybe);

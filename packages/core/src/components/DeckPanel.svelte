@@ -3,6 +3,7 @@
   import { cycleOwned, setQty, zoneCount } from '../deck';
   import type { Card, CardIndex, Deck, Entry, FormatDef, GameDef, Issue } from '../types';
   import { money } from '../util';
+  import Badges from './Badges.svelte';
   import Considering from './Considering.svelte';
   import CostCurve from './CostCurve.svelte';
   import DeckActions from './DeckActions.svelte';
@@ -117,7 +118,10 @@
               </span>
               <button class="cname" onclick={() => c && onOpen(c)}>
                 {#if c && game.cost(c) != null}<span class="cost num">{game.cost(c)}</span>{/if}
-                <span class="label">{c ? game.label(c) : e.id}</span>
+                <span class="namebox">
+                  <span class="label">{c ? game.label(c) : e.id}</span>
+                  {#if c && game.badges}<Badges badges={game.badges(c)} size="mini" />{/if}
+                </span>
               </button>
               <button class="demote" onclick={() => c && onDemote(c, z.id)} disabled={!c} title="Move one copy to Considering (a possible cut)" aria-label="Move one to Considering">?</button>
               <button
@@ -275,7 +279,16 @@
     padding: 4px 0;
     text-align: left;
   }
+  .namebox {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
   .label {
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

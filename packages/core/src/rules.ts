@@ -46,7 +46,7 @@ export function copyIssues<C extends Card>(game: GameDef<C>, deck: Deck, cards: 
   for (const [id, n] of counts) {
     const c = cards.get(id);
     if (!c) continue;
-    const max = game.maxCopies(c, format);
+    const max = game.maxCopies(c, format, deck, cards);
     if (n > max) issues.push({ level: 'error', message: `${game.label(c)}: ${n} copies, max ${max}`, cards: [id] });
   }
   return issues;

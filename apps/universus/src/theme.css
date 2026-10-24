@@ -1,0 +1,9 @@
+/* UniVersus look: dark forest with a Versus green accent (yellow is kept for Considering). */
+:root {
+  --bg: #08130e;
+  --panel: #0f1d16;
+  --panel-2: #16281f;
+  --line: #24402f;
+  --accent: #22c55e;
+  --accent-ink: #03150a;
+}

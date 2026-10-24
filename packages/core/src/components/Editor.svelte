@@ -75,7 +75,7 @@
     const def = format.zones.find((x) => x.id === z);
     // A full single-card slot (a leader or base in most formats) swaps instead of refusing.
     if (def?.command && def.max === 1 && (deck.zones[def.id]?.length ?? 0) > 0 && !game.illegal?.(card, format)) deck.zones[def.id] = [];
-    const err = addCard(game, deck, format, card, z ?? undefined);
+    const err = addCard(game, deck, format, card, z ?? undefined, index);
     if (err) say(err);
     else {
       changed();
@@ -105,7 +105,7 @@
   }
   function promote(card: C) {
     if (!deck) return;
-    const err = considerToDeck(game, deck, format, card);
+    const err = considerToDeck(game, deck, format, card, index);
     if (err) say(err);
     else changed();
   }
@@ -119,6 +119,15 @@
   function setFormat(to: string) {
     if (!deck || to === deck.format) return;
     changeFormat(deck, format, game.formats.find((f) => f.id === to)!);
+    changed();
+  }
+
+  function setOption(id: string, value: string) {
+    if (!deck) return;
+    const options = { ...(deck.options ?? {}) };
+    if (value) options[id] = value;
+    else delete options[id];
+    deck.options = options;
     changed();
   }
 
@@ -158,6 +167,19 @@
     <select value={deck.format} onchange={(e) => setFormat(e.currentTarget.value)} aria-label="Format">
       {#each game.formats as f (f.id)}<option value={f.id}>{f.name}</option>{/each}
     </select>
+    {#each game.deckOptions ?? [] as opt (opt.id)}
+      {@const choices = opt.choices(deck, index)}
+      {@const auto = opt.auto(deck, index)}
+      {#if choices.length}
+        <label class="option">
+          <span class="small muted">{opt.label}</span>
+          <select value={deck.options?.[opt.id] ?? ''} onchange={(e) => setOption(opt.id, e.currentTarget.value)}>
+            <option value="">Auto{auto ? ` (${choices.find((c) => c.value === auto)?.label ?? auto})` : ''}</option>
+            {#each choices as c (c.value)}<option value={c.value}>{c.label}{c.hint ? ` · ${c.hint}` : ''}</option>{/each}
+          </select>
+        </label>
+      {/if}
+    {/each}
     <button class="ghost danger small del" onclick={removeDeck}>Delete</button>
   </header>
 
@@ -183,7 +205,7 @@
   {/if}
 
   {#if viewing}
-    <CardModal {game} {deck} {format} card={viewing} {...shared} onClose={() => (viewing = null)} />
+    <CardModal {game} {index} {deck} {format} card={viewing} {...shared} onClose={() => (viewing = null)} />
   {/if}
 
   {#if goldfish && game.goldfish}
@@ -221,6 +243,12 @@
   .name:hover,
   .name:focus {
     border-color: var(--line);
+  }
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
   }
   .views {
     display: flex;

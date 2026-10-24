@@ -1,6 +1,7 @@
 <script lang="ts" generics="C extends Card">
   // Card search: free text, filter chips from the game, sort, and a grid of cards to add.
   import { consideringCount, copies } from '../deck';
+  import Badges from './Badges.svelte';
   import type { Card, CardData, CardIndex, Deck, FormatDef, GameDef } from '../types';
   import { money } from '../util';
 
@@ -37,6 +38,7 @@
   let q = $state('');
   let sel = $state<Record<string, (string | number)[]>>({});
   let fit = $state(false);
+  let toggled = $state<Record<string, boolean>>({});
   let sort = $state<keyof typeof SORTS>('cost');
   let limit = $state(PAGE);
   let showFilters = $state(false);
@@ -65,7 +67,7 @@
   );
 
   const zoneName = $derived(onlyZone ? (format.zones.find((z) => z.id === onlyZone)?.name ?? onlyZone) : '');
-  const activeCount = $derived(Object.values(sel).reduce((n, v) => n + v.length, 0) + (fit ? 1 : 0));
+  const activeCount = $derived(Object.values(sel).reduce((n, v) => n + v.length, 0) + (fit ? 1 : 0) + Object.values(toggled).filter(Boolean).length);
 
   // Cards the format doesn't allow (rotated out, suspended) are hidden unless asked for.
   const illegalIds = $derived(game.illegal ? new Set(data.cards.filter((c) => game.illegal!(c, format)).map((c) => c.id)) : new Set<string>());
@@ -84,6 +86,7 @@
         for (const w of words) if (!p.text.includes(w)) return false;
         for (const [id, v] of active) if (!p.values[id].some((x) => v.includes(x))) return false;
         if (fit && game.fit && !game.fit.test(p.c, deck, index, format)) return false;
+        for (const t of game.toggles ?? []) if (toggled[t.id] && !t.test(p.c, deck, index)) return false;
         if (!showIllegal && illegalIds.has(p.c.id)) {
           hidden++;
           return false;
@@ -105,7 +108,7 @@
 
   // New search or filters start back at the first page.
   $effect(() => {
-    void [q, sel, fit, sort, onlyZone, showIllegal];
+    void [q, sel, fit, toggled, sort, onlyZone, showIllegal];
     limit = PAGE;
   });
 
@@ -117,6 +120,7 @@
   function clearAll() {
     sel = {};
     fit = false;
+    toggled = {};
     q = '';
     onlyZone = null;
   }
@@ -150,6 +154,9 @@
   {#if game.fit}
     <label class="fit"><input type="checkbox" bind:checked={fit} /> {game.fit.label}</label>
   {/if}
+  {#each game.toggles ?? [] as t (t.id)}
+    <label class="fit"><input type="checkbox" checked={!!toggled[t.id]} onchange={(e) => (toggled = { ...toggled, [t.id]: e.currentTarget.checked })} /> {t.label}</label>
+  {/each}
 </div>
 
 <div class="status small muted">
@@ -173,13 +180,14 @@
     {@const img = game.image(c)}
     {@const n = copies(deck, c.id)}
     {@const m = consideringCount(deck, c.id)}
-    {@const max = game.maxCopies(c, format)}
+    {@const max = game.maxCopies(c, format, deck, index)}
     {@const bad = illegalIds.has(c.id)}
     <div class="tile" class:wide={img.landscape} class:in={n > 0} class:considered={m > 0 && !n} class:bad>
       <button class="art" onclick={() => onOpen(c)} title={game.label(c)}>
         <img src={img.src} alt={game.label(c)} loading="lazy" decoding="async" />
         {#if m}<span class="badge maybe-badge num">?{m}</span>{/if}
         {#if bad}<span class="badge bad-badge">Not legal</span>{/if}
+        {#if game.badges}<span class="symbols"><Badges badges={game.badges(c)} /></span>{/if}
       </button>
       <div class="controls">
         {#if maybe}
@@ -272,6 +280,14 @@
     right: auto;
     background: var(--error);
     color: #1a0505;
+  }
+  .symbols {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    padding: 2px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.7);
   }
   .considered .art {
     outline-color: var(--maybe);

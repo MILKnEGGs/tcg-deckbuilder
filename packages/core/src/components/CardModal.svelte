@@ -2,10 +2,12 @@
   // A card up close: big image (flip for double-sided), details, rules text, and add/remove.
   import { onMount } from 'svelte';
   import { consideringCount, copies } from '../deck';
-  import type { Card, Deck, FormatDef, GameDef } from '../types';
+  import Badges from './Badges.svelte';
+  import type { Card, CardIndex, Deck, FormatDef, GameDef } from '../types';
 
   let {
     game,
+    index,
     deck,
     format,
     card,
@@ -17,6 +19,7 @@
     onClose,
   }: {
     game: GameDef<C>;
+    index: CardIndex<C>;
     deck: Deck;
     format: FormatDef;
     card: C;
@@ -32,7 +35,7 @@
   let flipped = $state(false);
   const img = $derived(game.image(card));
   const n = $derived(copies(deck, card.id));
-  const max = $derived(game.maxCopies(card, format));
+  const max = $derived(game.maxCopies(card, format, deck, index));
   const home = $derived(game.zoneFor(card, format));
   const hasSide = $derived(home === 'main' && format.zones.some((z) => z.id === 'side'));
   const inSide = $derived(copies(deck, card.id, ['side']));
@@ -52,6 +55,7 @@
     </div>
     <div class="info">
       <h2>{game.label(card)}</h2>
+      {#if game.badges}<div class="symbols"><Badges badges={game.badges(card)} size="large" /></div>{/if}
       <dl>
         {#each game.details(card) as [k, v] (k)}
           <dt>{k}</dt>
@@ -132,6 +136,9 @@
   h2 {
     margin: 0 36px 10px 0;
     font-size: 1.25rem;
+  }
+  .symbols {
+    margin: -4px 0 12px;
   }
   dl {
     display: grid;

@@ -26,6 +26,10 @@ export interface Fish {
   counter: number;
   /** How many stack cards to deal when the first turn starts. */
   stackSize: number;
+  /** Opening hand size (and the size to refill to, for games that refill). */
+  handSize: number;
+  /** The counter's value on turn 1. */
+  counterStart: number;
   /** Turn-by-turn record shown in the log, newest last. */
   log: string[];
 }
@@ -44,10 +48,13 @@ export const pile = (deck: Deck, zones: string[]) => zones.flatMap((z) => (deck.
 
 export function start<C extends Card>(deck: Deck, cfg: Def<C>, cards: CardIndex<C> = new Map(), random = Math.random): Fish {
   const library = shuffle(pile(deck, cfg.zones), random);
-  const hand = library.splice(0, cfg.hand);
+  const handSize = cfg.handFrom?.(deck, cards) ?? cfg.hand;
+  const hand = library.splice(0, handSize);
   const side = cfg.side ? shuffle(pile(deck, [cfg.side.zone]), random) : [];
   return {
+    handSize,
     counter: 0,
+    counterStart: cfg.counter ? (cfg.counter.firstFrom?.(deck, cards) ?? cfg.counter.first) : 0,
     stackSize: cfg.stack ? (cfg.stack.countFrom?.(deck, cards) ?? cfg.stack.count) : 0,
     library,
     hand,
@@ -77,10 +84,10 @@ export function flipStack(f: Fish, cfg: GoldfishDef): Fish {
   return { ...f, stack: rest, discard: [...f.discard, top], log: [...f.log, `Flipped a ${cfg.stack.name.toLowerCase()} card (${rest.length} left)`] };
 }
 
-export function mulligan(f: Fish, cfg: GoldfishDef, random = Math.random): Fish {
+export function mulligan(f: Fish, random = Math.random): Fish {
   if (f.turn !== 0 || f.mulligansLeft <= 0) return f;
   const library = shuffle([...f.library, ...f.hand], random);
-  const hand = library.splice(0, cfg.hand);
+  const hand = library.splice(0, f.handSize);
   return { ...f, library, hand, mulligansLeft: f.mulligansLeft - 1, log: [...f.log, `Mulliganed into a new ${hand.length}`] };
 }
 
@@ -113,7 +120,7 @@ export function nextTurn(f: Fish, cfg: GoldfishDef): Fish {
     // Setup ends: deal the face-down stack (security) from the top of the deck.
     const library = [...f.library];
     const stack = cfg.stack ? library.splice(0, f.stackSize) : [];
-    const counter = cfg.counter ? Math.min(cfg.counter.max, cfg.counter.first) : 0;
+    const counter = cfg.counter ? f.counterStart : 0;
     const parts = [
       cfg.resources ? `${f.resources.length} resources` : '',
       cfg.stack ? `${stack.length} ${cfg.stack.name.toLowerCase()}` : '',
@@ -123,9 +130,10 @@ export function nextTurn(f: Fish, cfg: GoldfishDef): Fish {
     return { ...f, library, stack, counter, turn: 1, resourcesLeft: 0, log: [...f.log, `${cfg.turn} 1: ${parts.filter(Boolean).join(', ')}`] };
   }
   const library = [...f.library];
-  const drawn = library.splice(0, cfg.draw);
+  const want = cfg.refill ? Math.max(0, f.handSize - f.hand.length) : cfg.draw;
+  const drawn = library.splice(0, want);
   const turn = f.turn + 1;
-  const counter = cfg.counter ? Math.min(cfg.counter.max, f.counter + cfg.counter.perTurn) : 0;
+  const counter = cfg.counter ? Math.min(Math.max(cfg.counter.max, f.counterStart), f.counter + cfg.counter.perTurn) : 0;
   return {
     ...f,
     library,
@@ -133,14 +141,14 @@ export function nextTurn(f: Fish, cfg: GoldfishDef): Fish {
     turn,
     counter,
     resourcesLeft: cfg.resources?.perTurn ?? 0,
-    log: [...f.log, `${cfg.turn} ${turn}: drew ${drawn.length}${drawn.length < cfg.draw ? ' (deck empty)' : ''}${cfg.counter ? `, ${counter} ${cfg.counter.name}` : ''}`],
+    log: [...f.log, `${cfg.turn} ${turn}: drew ${drawn.length}${drawn.length < want ? ' (deck empty)' : ''}${cfg.counter ? `, ${counter} ${cfg.counter.name}` : ''}`],
   };
 }
 
 /** Adjusts the counter by hand (effects that add or return DON!!). */
 export function bumpCounter(f: Fish, cfg: GoldfishDef, by: number): Fish {
   if (!cfg.counter) return f;
-  return { ...f, counter: Math.max(0, Math.min(cfg.counter.max, f.counter + by)) };
+  return { ...f, counter: Math.max(0, Math.min(Math.max(cfg.counter.max, f.counterStart), f.counter + by)) };
 }
 
 /**

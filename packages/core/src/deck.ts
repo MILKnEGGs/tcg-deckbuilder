@@ -45,13 +45,13 @@ export function setQty(deck: Deck, zone: string, id: string, qty: number): void 
  * Adds one copy where the game says the card goes, unless that would break the copy limit or the
  * zone's hard cap. Returns why it couldn't, or null on success.
  */
-export function addCard<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C, zone = game.zoneFor(card, format)): string | null {
+export function addCard<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C, zone = game.zoneFor(card, format), cards?: CardIndex<C>): string | null {
   if (!zone) return `${game.label(card)} can't go in a ${format.name} deck`;
   const why = game.illegal?.(card, format);
   if (why) return `${game.label(card)}: ${why}`;
   const z = format.zones.find((x) => x.id === zone);
   if (!z) return `${format.name} has no ${zone}`;
-  const max = game.maxCopies(card, format);
+  const max = game.maxCopies(card, format, deck, cards);
   if (copies(deck, card.id) >= max) return max === 1 ? `Only 1 ${game.label(card)} allowed` : `Max ${max} copies of ${game.label(card)}`;
   if (zoneCount(deck, zone) >= z.max) return `${z.name} is full (${z.max})`;
   const e = zoneEntries(deck, zone).find((x) => x.id === card.id);
@@ -79,10 +79,10 @@ export function setConsidering(deck: Deck, id: string, qty: number): void {
 }
 
 /** Moves one considered copy into the deck, if the deck's rules allow it. */
-export function considerToDeck<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C): string | null {
+export function considerToDeck<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C, cards?: CardIndex<C>): string | null {
   const e = considering(deck).find((x) => x.id === card.id);
   if (!e) return null;
-  const err = addCard(game, deck, format, card);
+  const err = addCard(game, deck, format, card, undefined, cards);
   if (err) return err;
   // Owned copies come along with it.
   if (e.owned > 0) {

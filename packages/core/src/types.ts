@@ -41,6 +41,8 @@ export interface Deck {
   zones: Record<string, Entry[]>;
   /** Cards you're thinking about adding (or cutting). Not part of the deck: no size, rules or price. */
   considering?: Entry[];
+  /** Game-specific deck settings (UniVersus' primary symbol). Missing means "pick automatically". */
+  options?: Record<string, string>;
   notes?: string;
 }
 
@@ -87,6 +89,10 @@ export interface FilterDef<C extends Card> {
 export interface GoldfishDef<C extends Card = Card> {
   /** Cards in the opening hand. */
   hand: number;
+  /** Opening hand size from the deck instead (UniVersus: the character's hand size). */
+  handFrom?(deck: Deck, cards: CardIndex<C>): number;
+  /** Each turn, draw back up to the hand size instead of drawing `draw` cards. */
+  refill?: boolean;
   /** Free mulligans allowed before the first turn. */
   mulligans: number;
   /** Cards drawn at the start of each later turn (or round). */
@@ -100,8 +106,11 @@ export interface GoldfishDef<C extends Card = Card> {
    * life cards, whose number comes from the leader.
    */
   stack?: { name: string; count: number; countFrom?(deck: Deck, cards: CardIndex<C>): number };
-  /** A number that grows each turn, like One Piece's DON!!: `first` on turn 1, then +`perTurn`, up to `max`. */
-  counter?: { name: string; first: number; perTurn: number; max: number };
+  /**
+   * A number tracked through the game: One Piece's DON!! (`first` on turn 1, then +`perTurn`, up to `max`),
+   * or a health total that only changes by hand (`perTurn` 0, starting value from the deck).
+   */
+  counter?: { name: string; first: number; perTurn: number; max: number; firstFrom?(deck: Deck, cards: CardIndex<C>): number };
   /** A separate deck from another zone, played from the top (Digimon's Digi-Egg deck). */
   side?: { zone: string; name: string; action: string; into: string };
   /** Zones shuffled into the draw pile. */
@@ -110,6 +119,24 @@ export interface GoldfishDef<C extends Card = Card> {
   note?: string;
   /** What the odds table counts; defaults to "cost N or less" for 1–4. */
   odds?: { label: string; test(card: C): boolean }[];
+}
+
+/** A per-deck choice shown in the deck's header, e.g. UniVersus' primary symbol. */
+export interface DeckOptionDef<C extends Card = Card> {
+  id: string;
+  label: string;
+  /** The choices for this deck right now, with a short hint like "48 cards fit". */
+  choices(deck: Deck, cards: CardIndex<C>): { value: string; label: string; hint?: string }[];
+  /** What "Auto" picks. */
+  auto(deck: Deck, cards: CardIndex<C>): string | null;
+}
+
+/** A small tag drawn on a card (UniVersus symbols). `square` marks an attuned symbol. */
+export interface Badge {
+  text: string;
+  title: string;
+  color?: string;
+  square?: boolean;
 }
 
 export interface Imported {
@@ -131,8 +158,11 @@ export interface GameDef<C extends Card> {
   formats: FormatDef[];
   /** Where a card goes when added in this format, or null if it can't be added at all. */
   zoneFor(card: C, format: FormatDef): string | null;
-  /** Most copies of this card allowed, counted across all zones. Caps the + button. */
-  maxCopies(card: C, format: FormatDef): number;
+  /**
+   * Most copies of this card allowed, counted across all zones. Caps the + button. The deck is passed
+   * where known, for limits that depend on it (UniVersus: a character allowing 8 copies of one card).
+   */
+  maxCopies(card: C, format: FormatDef, deck?: Deck, cards?: CardIndex<C>): number;
   /** Why a card isn't allowed in this format at all (rotated out, suspended), or null if it is. */
   illegal?(card: C, format: FormatDef): string | null;
   validate(deck: Deck, cards: CardIndex<C>, format: FormatDef): Issue[];
@@ -145,6 +175,8 @@ export interface GameDef<C extends Card> {
   /** Cost for sorting and the cost curve; null for cards without one. */
   cost(card: C): number | null;
   image(card: C): { src: string; back?: string; landscape?: boolean };
+  /** The printed name isn't at the top of the card (UniVersus), so the Deck view labels its stacks. */
+  labelStacks?: boolean;
   /** Label/value rows for the card detail view. */
   details(card: C): [string, string][];
   /** Rules text paragraphs for the card detail view. */
@@ -154,6 +186,10 @@ export interface GameDef<C extends Card> {
   filters: FilterDef<C>[];
   /** Filter ids to break the main deck down by in the Deck view (e.g. aspects, arenas). */
   stats?: string[];
+  /** Per-deck settings shown in the deck header. */
+  deckOptions?: DeckOptionDef<C>[];
+  /** Small tags drawn on cards in search, the deck list and the card view. */
+  badges?(card: C): Badge[];
   /** An optional search toggle such as "Fits my leaders": cards that suit what's already in the deck. */
   fit?: {
     label: string;
@@ -161,6 +197,8 @@ export interface GameDef<C extends Card> {
     miss(card: C, deck: Deck, cards: CardIndex<C>): string | null;
     test(card: C, deck: Deck, cards: CardIndex<C>, format: FormatDef): boolean;
   };
+  /** More search toggles like fit, e.g. UniVersus' "Same IP as my character". */
+  toggles?: { id: string; label: string; test(card: C, deck: Deck, cards: CardIndex<C>): boolean }[];
   /** Solo test draws ("goldfishing"). Without it the Goldfish button is hidden. */
   goldfish?: GoldfishDef<C>;
 

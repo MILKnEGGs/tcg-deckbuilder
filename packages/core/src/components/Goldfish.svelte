@@ -35,7 +35,9 @@
           return cost != null && cost <= k;
         },
       }));
-    const seen = [config.hand, config.hand + config.draw, config.hand + config.draw * 2];
+    // Games that refill the hand draw however many were played, so only the opening hand is predictable.
+    const h = fish.handSize;
+    const seen = config.refill ? [h] : [h, h + config.draw, h + config.draw * 2];
     return tests.map((t) => {
       const hits = ids.filter((id) => {
         const c = index.get(id);
@@ -68,7 +70,7 @@
     {#if config.counter && fish.turn > 0}
       <span class="counter">
         <button class="ghost small" onclick={() => (fish = bumpCounter(fish, config, -1))} aria-label="One less {config.counter.name}">−</button>
-        <strong class="num">{fish.counter}</strong>/{config.counter.max} {config.counter.name}
+        <strong class="num">{fish.counter}</strong>/{Math.max(config.counter.max, fish.counterStart)} {config.counter.name}
         <button class="ghost small" onclick={() => (fish = bumpCounter(fish, config, 1))} aria-label="One more {config.counter.name}">+</button>
       </span>
     {/if}
@@ -92,10 +94,12 @@
         <h3>Hand <span class="num muted">{fish.hand.length}</span></h3>
         <div class="controls">
           {#if fish.turn === 0}
-            <button onclick={() => (fish = mulligan(fish, config))} disabled={fish.mulligansLeft <= 0}>Mulligan ({fish.mulligansLeft} left)</button>
+            <button onclick={() => (fish = mulligan(fish))} disabled={fish.mulligansLeft <= 0}>Mulligan ({fish.mulligansLeft} left)</button>
           {/if}
           <button class="primary" onclick={() => { fish = nextTurn(fish, config); picked = null; }} disabled={!ready}>
-            {fish.turn === 0 ? `Start ${config.turn.toLowerCase()} 1` : `Next ${config.turn.toLowerCase()} (draw ${config.draw})`}
+            {fish.turn === 0
+              ? `Start ${config.turn.toLowerCase()} 1`
+              : `Next ${config.turn.toLowerCase()} (${config.refill ? `draw up to ${fish.handSize}` : `draw ${config.draw}`})`}
           </button>
         </div>
       </div>
@@ -177,7 +181,10 @@
         <h3>Odds of an early play</h3>
         <table>
           <thead>
-            <tr><th>Card</th><th>Opening hand</th><th>By {config.turn.toLowerCase()} 2</th><th>By {config.turn.toLowerCase()} 3</th></tr>
+            <tr>
+              <th>Card</th><th>Opening hand</th>
+              {#if !config.refill}<th>By {config.turn.toLowerCase()} 2</th><th>By {config.turn.toLowerCase()} 3</th>{/if}
+            </tr>
           </thead>
           <tbody>
             {#each odds as o (o.label)}
@@ -188,7 +195,11 @@
             {/each}
           </tbody>
         </table>
-        <p class="muted small">Chance of holding at least one such card{config.resources ? ' (before resourcing)' : ''}, counting {config.draw} {config.draw === 1 ? 'draw' : 'draws'} per {config.turn.toLowerCase()}.</p>
+        <p class="muted small">
+          Chance of holding at least one such card{config.resources ? ' (before resourcing)' : ''}{config.refill
+            ? ` in your opening ${fish.handSize}.`
+            : `, counting ${config.draw} ${config.draw === 1 ? 'draw' : 'draws'} per ${config.turn.toLowerCase()}.`}
+        </p>
       </section>
       <section class="log">
         <h3>Log</h3>

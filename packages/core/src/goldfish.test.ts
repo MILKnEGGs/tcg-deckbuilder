@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atLeastOne, move, mulligan, nextTurn, setupDone, start } from './goldfish';
+import { atLeastOne, bumpCounter, move, mulligan, nextTurn, setupDone, start } from './goldfish';
 import type { Deck, GoldfishDef } from './types';
 
 const cfg: GoldfishDef = { hand: 6, mulligans: 1, draw: 2, turn: 'Round', resources: { setup: 2, perTurn: 1 }, zones: ['main'] };
@@ -22,11 +22,11 @@ describe('goldfish', () => {
 
   it('allows one mulligan', () => {
     let f = start(deck, cfg);
-    f = mulligan(f, cfg);
+    f = mulligan(f);
     expect(f.mulligansLeft).toBe(0);
     expect(f.hand).toHaveLength(6);
     expect(f.library).toHaveLength(54);
-    expect(mulligan(f, cfg)).toBe(f);
+    expect(mulligan(f)).toBe(f);
   });
 
   it('needs the setup resources before the first round, then draws and allows resourcing each round', () => {
@@ -58,6 +58,29 @@ describe('goldfish', () => {
     expect([f.stack.length, f.counter]).toEqual([4, 1]);
     for (let i = 0; i < 6; i++) f = nextTurn(f, op);
     expect(f.counter).toBe(10);
+  });
+
+  it('can size the hand from the deck and refill it each turn, with a health counter', () => {
+    const uvs: GoldfishDef = {
+      hand: 5,
+      handFrom: () => 7,
+      refill: true,
+      mulligans: 1,
+      draw: 0,
+      turn: 'Turn',
+      zones: ['main'],
+      counter: { name: 'Health', first: 20, perTurn: 0, max: 0, firstFrom: () => 25 },
+    };
+    let f = start(deck, uvs);
+    expect(f.hand).toHaveLength(7);
+    f = nextTurn(f, uvs);
+    expect(f.counter).toBe(25);
+    f = move(f, 0, 'played');
+    f = move(f, 0, 'played');
+    f = nextTurn(f, uvs);
+    expect(f.hand).toHaveLength(7);
+    expect(f.counter).toBe(25);
+    expect(bumpCounter(f, uvs, -3).counter).toBe(22);
   });
 
   it('computes the odds of drawing at least one of a card', () => {
