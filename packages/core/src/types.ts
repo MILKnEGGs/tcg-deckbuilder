@@ -101,8 +101,13 @@ export interface GoldfishDef<C extends Card = Card> {
   draw: number;
   /** What a turn is called ("Round"). */
   turn: string;
-  /** Cards put face down as resources from the opening hand, and how many you may add each turn after. */
-  resources?: { setup: number; perTurn: number };
+  /**
+   * Cards put face down as resources from the opening hand, and how many you may add each turn after
+   * (from turn 1 if `firstTurn`, as with Lorcana's inkwell; SWU starts adding in round 2).
+   */
+  resources?: { setup: number; perTurn: number; firstTurn?: boolean; action?: string; pile?: string };
+  /** Which cards may become resources (Lorcana: only inkable ones). */
+  canResource?(card: C): boolean;
   /**
    * Face-down cards dealt from the deck once setup is done: Digimon's 5 security cards, or One Piece's
    * life cards, whose number comes from the leader.

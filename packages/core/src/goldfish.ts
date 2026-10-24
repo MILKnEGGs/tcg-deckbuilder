@@ -127,7 +127,7 @@ export function nextTurn(f: Fish, cfg: GoldfishDef): Fish {
       cfg.counter ? `${counter} ${cfg.counter.name}` : '',
       `${f.hand.length} cards in hand`,
     ];
-    return { ...f, library, stack, counter, turn: 1, resourcesLeft: 0, log: [...f.log, `${cfg.turn} 1: ${parts.filter(Boolean).join(', ')}`] };
+    return { ...f, library, stack, counter, turn: 1, resourcesLeft: cfg.resources?.firstTurn ? cfg.resources.perTurn : 0, log: [...f.log, `${cfg.turn} 1: ${parts.filter(Boolean).join(', ')}`] };
   }
   const library = [...f.library];
   const want = cfg.refill ? Math.max(0, f.handSize - f.hand.length) : cfg.draw;

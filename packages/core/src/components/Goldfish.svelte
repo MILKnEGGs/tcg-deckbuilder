@@ -68,7 +68,7 @@
   <header>
     <h2>🐟 Goldfish</h2>
     <span class="muted small">
-      {fish.turn ? `${config.turn} ${fish.turn}` : 'Setup'} · {fish.library.length} in deck{config.resources ? ` · ${fish.resources.length} resources` : ''}
+      {fish.turn ? `${config.turn} ${fish.turn}` : 'Setup'} · {fish.library.length} in deck{config.resources ? ` · ${fish.resources.length} ${(config.resources.pile ?? 'resources').toLowerCase()}` : ''}
     </span>
     <span class="spacer"></span>
     {#if config.counter && fish.turn > 0}
@@ -125,9 +125,9 @@
         </div>
       </div>
       {#if fish.turn === 0 && needResources}
-        <p class="prompt small">Tap a card, then <strong>Resource</strong>. Choose {needResources} more.</p>
+        <p class="prompt small">Tap a card, then <strong>{config.resources?.action ?? 'Resource'}</strong>. Choose {needResources} more.</p>
       {:else if fish.resourcesLeft > 0 && fish.turn > 0}
-        <p class="prompt small">You may resource {fish.resourcesLeft} card this {config.turn.toLowerCase()}.</p>
+        <p class="prompt small">You may {(config.resources?.action ?? 'resource').toLowerCase()} {fish.resourcesLeft} card this {config.turn.toLowerCase()}.</p>
       {/if}
       <div class="cards hand">
         {#each fish.hand as id, i (id + ':' + i)}
@@ -139,7 +139,7 @@
       {#if picked !== null}
         <div class="actions">
           <button class="primary" onclick={() => act('played')} disabled={fish.turn === 0}>Play</button>
-          {#if config.resources}<button onclick={() => act('resources')} disabled={fish.resourcesLeft <= 0}>Resource</button>{/if}
+          {#if config.resources}<button onclick={() => act('resources')} disabled={fish.resourcesLeft <= 0 || (!!config.canResource && !!card(fish.hand[picked]) && !config.canResource(card(fish.hand[picked])!))}>{config.resources.action ?? 'Resource'}</button>{/if}
           <button onclick={() => act('discard')}>Discard</button>
           <button class="ghost" onclick={() => (picked = null)}>Cancel</button>
         </div>
@@ -179,7 +179,7 @@
       </section>
       {#if config.resources}
         <section>
-          <h3>Resources <span class="num muted">{fish.resources.length}</span></h3>
+          <h3>{config.resources.pile ?? 'Resources'} <span class="num muted">{fish.resources.length}</span></h3>
           <div class="cards small-cards">
             {#each fish.resources as id, i (id + ':' + i)}
               <button class="card" onclick={() => (fish = unplay(fish, 'resources', i))} title="Tap to return to hand"><img src={img(id)} alt="" /></button>
