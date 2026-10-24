@@ -12,6 +12,7 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 | [Milk's UniVersus Deck Builder](apps/universus) | UniVersus (and Universal Fighting System) | Standard, Retro |
 | [Milk's Lorcana Deck Builder](apps/lorcana) | Disney Lorcana | Core, Infinity |
 | [Milk's Pokémon Deck Builder](apps/pokemon) | Pokémon TCG | Standard, Expanded |
+| [Milk's Flesh and Blood Deck Builder](apps/fab) | Flesh and Blood | Classic Constructed, Blitz, Silver Age, Living Legend |
 | [Milk's Destiny Deck Builder](apps/destiny) | Star Wars: Destiny (official + A Renewed Hope community sets) | ARH Standard, Galactic Infinite, FFG Standard, FFG Trilogy, FFG Infinite |
 
 Every deck has a Build view (search and list side by side) and a Deck view (the deck as card images, with stats).
@@ -31,6 +32,8 @@ Card data and pictures both come from TCGplayer (via TCGCSV).
 
 **Keeping Pokémon legal:** Standard legality (rotation by regulation mark) comes from [TCGdex](https://tcgdex.dev/) daily.
 The Expanded banned list is at the top of `apps/pokemon/src/game.ts` (`EXPANDED_BANS`), from pokemon.com/us/play-pokemon/about/pokemon-tcg-banned-card-list. Update it when Play! Pokémon announces bans.
+
+**Keeping Flesh and Blood legal:** nothing to maintain by hand. Legality, bans, suspensions and the Living Legend restricted list for every format come from the open [the-fab-cube card database](https://github.com/the-fab-cube/flesh-and-blood-cards) daily.
 
 **Keeping Destiny legal:** nothing to maintain by hand. Cards, legal sets, bans, the restricted list and pairs, and per-format point changes all come from the [A Renewed Hope](https://swdrenewedhope.com/) database each day.
 Community sets are free print-and-play; TCGplayer prices exist only for official Fantasy Flight cards.
