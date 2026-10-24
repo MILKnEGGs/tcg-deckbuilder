@@ -61,11 +61,11 @@ const zones = () => [
 const fmt = (id: string, name: string, summary: string): FormatDef => ({ id, name, summary, zones: zones(), size: { zones: ['main'], target: 30, exact: true } });
 
 export const formats: FormatDef[] = [
+  { ...fmt('FFGInf', 'FFG Infinite', 'Every official Fantasy Flight set'), recommended: true },
   fmt('ARHS', 'ARH Standard', 'The current community format: A Renewed Hope sets from Echoes of Destiny on'),
   fmt('INF', 'Galactic Infinite', 'Every set, official and community'),
   fmt('STD', 'FFG Standard', "Fantasy Flight's last official Standard (Legacies to Transformations)"),
   fmt('TRI', 'FFG Trilogy', "Fantasy Flight's Trilogy (Convergence to Covert Missions)"),
-  fmt('FFGInf', 'FFG Infinite', 'Every official Fantasy Flight set'),
 ];
 
 const MAX_POINTS = 30;
@@ -335,7 +335,7 @@ function exportDeck(deck: Deck, cards: CardIndex<SwdCard>): string {
 }
 
 function importDeck(text: string, cards: CardIndex<SwdCard>, all: FormatDef[]): Imported {
-  return { ...parseTextDeck(game, text, cards, all[0]), format: 'ARHS' };
+  return { ...parseTextDeck(game, text, cards, all[0]), format: all[0].id };
 }
 
 export const game: GameDef<SwdCard> = {

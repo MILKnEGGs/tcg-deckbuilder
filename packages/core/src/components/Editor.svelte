@@ -165,7 +165,7 @@
       <button class:on={view === 'deck'} onclick={() => (view = 'deck')}>Deck</button>
     </div>
     <select value={deck.format} onchange={(e) => setFormat(e.currentTarget.value)} aria-label="Format">
-      {#each game.formats as f (f.id)}<option value={f.id}>{f.name}</option>{/each}
+      {#each game.formats as f (f.id)}<option value={f.id}>{f.name}{f.recommended ? ' (Recommended)' : ''}</option>{/each}
     </select>
     {#each game.deckOptions ?? [] as opt (opt.id)}
       {@const choices = opt.choices(deck, index)}

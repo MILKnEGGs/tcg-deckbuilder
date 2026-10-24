@@ -77,6 +77,8 @@ export interface FormatDef {
   zones: ZoneDef[];
   /** The deck-size counter: which zones count toward it and the number to hit. */
   size: { zones: string[]; target: number; exact?: boolean };
+  /** Marked "(Recommended)" wherever formats are listed. Put it first so new decks default to it. */
+  recommended?: boolean;
 }
 
 export interface FilterDef<C extends Card> {

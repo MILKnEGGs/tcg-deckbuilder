@@ -148,7 +148,7 @@
       {#each game.formats as f (f.id)}
         <label class="format" class:on={newFormat === f.id}>
           <input type="radio" name="format" value={f.id} bind:group={newFormat} />
-          <span><strong>{f.name}</strong><br /><span class="muted small">{f.summary}</span></span>
+          <span><strong>{f.name}</strong>{#if f.recommended}{' '}<em>(Recommended)</em>{/if}<br /><span class="muted small">{f.summary}</span></span>
         </label>
       {/each}
     </fieldset>
@@ -174,7 +174,7 @@
       <label class="field">
         <span>Format</span>
         <select bind:value={importFormat}>
-          {#each game.formats as f (f.id)}<option value={f.id}>{f.name}</option>{/each}
+          {#each game.formats as f (f.id)}<option value={f.id}>{f.name}{f.recommended ? ' (Recommended)' : ''}</option>{/each}
         </select>
       </label>
     {/if}
