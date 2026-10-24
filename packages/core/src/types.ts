@@ -65,6 +65,8 @@ export interface ZoneDef {
   max: number;
   /** Shown compactly at the top of the deck (leaders, bases) rather than as a list. */
   command?: boolean;
+  /** How many empty "+ Add" slots to show while it has room (default: all of `max`). */
+  placeholders?: number;
 }
 
 export interface FormatDef {
@@ -117,6 +119,8 @@ export interface GoldfishDef<C extends Card = Card> {
   zones: string[];
   /** One line of reminders shown at the top, e.g. how setup works. */
   note?: string;
+  /** Dice to roll (Destiny: each character's die, two for elites), each as a list of face labels. */
+  dice?(deck: Deck, cards: CardIndex<C>): { name: string; faces: string[] }[];
   /** What the odds table counts; defaults to "cost N or less" for 1–4. */
   odds?: { label: string; test(card: C): boolean }[];
 }
@@ -177,6 +181,12 @@ export interface GameDef<C extends Card> {
   image(card: C): { src: string; back?: string; landscape?: boolean };
   /** The printed name isn't at the top of the card (UniVersus), so the Deck view labels its stacks. */
   labelStacks?: boolean;
+  /** What 2+ copies of a leader-type card mean, e.g. "Elite" for a Destiny character with two dice. */
+  qtyLabel?(card: C, qty: number): string | null;
+  /** Extra counters in the deck summary, e.g. Destiny's "28/30 points". */
+  meters?(deck: Deck, cards: CardIndex<C>, format: FormatDef): { label: string; value: number; max: number }[];
+  /** Shown instead of a price when a card has none for a known reason ("Print & play"). */
+  priceNote?(card: C): string | null;
   /** Label/value rows for the card detail view. */
   details(card: C): [string, string][];
   /** Rules text paragraphs for the card detail view. */

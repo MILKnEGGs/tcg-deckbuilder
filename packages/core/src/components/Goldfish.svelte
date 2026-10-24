@@ -10,6 +10,10 @@
   // svelte-ignore state_referenced_locally
   let fish = $state<Fish>(start(deck, config, index));
   let picked = $state<number | null>(null);
+  // Dice roller: one rolled face per die, or nothing until the first roll.
+  const dice = $derived(config.dice?.(deck, index) ?? []);
+  let rolled = $state<string[] | null>(null);
+  const roll = () => (rolled = dice.map((d) => d.faces[Math.floor(Math.random() * d.faces.length)] ?? '?'));
 
   onMount(() => dialog?.showModal());
 
@@ -70,7 +74,7 @@
     {#if config.counter && fish.turn > 0}
       <span class="counter">
         <button class="ghost small" onclick={() => (fish = bumpCounter(fish, config, -1))} aria-label="One less {config.counter.name}">−</button>
-        <strong class="num">{fish.counter}</strong>/{Math.max(config.counter.max, fish.counterStart)} {config.counter.name}
+        <strong class="num">{fish.counter}</strong>{config.counter.max < 99 ? `/${Math.max(config.counter.max, fish.counterStart)}` : ''} {config.counter.name}
         <button class="ghost small" onclick={() => (fish = bumpCounter(fish, config, 1))} aria-label="One more {config.counter.name}">+</button>
       </span>
     {/if}
@@ -80,6 +84,23 @@
 
   <div class="body">
     {#if config.note && fish.turn === 0}<p class="note small">{config.note}</p>{/if}
+
+    {#if dice.length}
+      <section class="dice">
+        <div class="row-head">
+          <h3>Dice <span class="num muted">{dice.length}</span></h3>
+          <button class="primary" onclick={roll}>🎲 Roll {dice.length === 1 ? 'the die' : `all ${dice.length}`}</button>
+        </div>
+        <ul>
+          {#each dice as d, i (i)}
+            <li>
+              <span class="small muted">{d.name}</span>
+              <strong class="face">{rolled ? rolled[i] : '—'}</strong>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
 
     {#if commandCards.length}
       <div class="command">
@@ -236,6 +257,31 @@
   }
   .spacer {
     flex: 1;
+  }
+  .dice {
+    background: var(--panel-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .dice ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .dice li {
+    display: grid;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+  .face {
+    font-size: 1.05rem;
+    color: var(--accent);
   }
   .counter {
     display: inline-flex;

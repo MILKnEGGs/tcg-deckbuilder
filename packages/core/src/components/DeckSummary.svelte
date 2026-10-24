@@ -1,10 +1,19 @@
 <script lang="ts" generics="C extends Card">
   // Deck size, prices and rule issues. Shared by the Build and Deck views.
   import { sizeOf, totals } from '../deck';
-  import type { Card, CardIndex, Deck, FormatDef, Issue } from '../types';
+  import type { Card, CardIndex, Deck, FormatDef, GameDef, Issue } from '../types';
   import { money, plural } from '../util';
 
-  let { index, deck, format, issues, sticky = true }: { index: CardIndex<C>; deck: Deck; format: FormatDef; issues: Issue[]; sticky?: boolean } = $props();
+  let {
+    game,
+    index,
+    deck,
+    format,
+    issues,
+    sticky = true,
+  }: { game: GameDef<C>; index: CardIndex<C>; deck: Deck; format: FormatDef; issues: Issue[]; sticky?: boolean } = $props();
+
+  const meters = $derived(game.meters?.(deck, index, format) ?? []);
 
   const t = $derived(totals(deck, index));
   const maybe = $derived(totals(deck, index, [deck.considering ?? []]));
@@ -17,6 +26,12 @@
     <span class="big num">{size}<span class="of">/{target}</span></span>
     <span class="small muted">{format.size.exact ? 'cards' : 'card minimum'}</span>
   </div>
+  {#each meters as m (m.label)}
+    <div class="size" class:over={m.value > m.max} class:done={m.value > 0 && m.value <= m.max}>
+      <span class="big num">{m.value}<span class="of">/{m.max}</span></span>
+      <span class="small muted">{m.label}</span>
+    </div>
+  {/each}
   <div class="money">
     <div><span class="muted small">Deck</span> <strong class="num">{money(t.total)}</strong></div>
     <div><span class="muted small">To finish</span> <strong class="num finish">{money(t.toFinish)}</strong></div>

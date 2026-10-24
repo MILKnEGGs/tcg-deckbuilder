@@ -58,7 +58,7 @@
           >
             {e.owned >= e.qty ? '✓' : ''}{e.qty > 1 ? `${e.owned}/${e.qty}` : e.owned ? '' : 'Own?'}
           </button>
-          <span class="price num small">{money(c?.price != null ? c.price * e.qty : null)}</span>
+          <span class="price num small">{c?.price == null && c && game.priceNote?.(c) ? game.priceNote(c) : money(c?.price != null ? c.price * e.qty : null)}</span>
           <button class="in small" onclick={() => c && onPromote(c)} disabled={!c} title="Move one copy into the deck">→ Deck</button>
         </li>
       {/each}

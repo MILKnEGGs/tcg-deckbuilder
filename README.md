@@ -10,6 +10,7 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 | [Milk's One Piece Deck Builder](apps/onepiece) | One Piece Card Game (English cards) | Standard, Extra Regulation |
 | [Milk's Union Arena Deck Builder](apps/unionarena) | Union Arena (English cards) | Official |
 | [Milk's UniVersus Deck Builder](apps/universus) | UniVersus (and Universal Fighting System) | Standard, Retro |
+| [Milk's Destiny Deck Builder](apps/destiny) | Star Wars: Destiny (official + A Renewed Hope community sets) | ARH Standard, Galactic Infinite, FFG Standard, FFG Trilogy, FFG Infinite |
 
 Every deck has a Build view (search and list side by side) and a Deck view (the deck as card images, with stats).
 You can also keep a Considering list of maybe-adds and maybe-cuts, goldfish sample hands, and buy missing cards through a pre-filled TCGplayer Mass Entry link.
@@ -23,6 +24,9 @@ Card data comes from [digimoncard.io](https://digimoncard.io). A card counts as 
 **Keeping One Piece legal:** the banned list and banned pairs are at the top of `apps/onepiece/src/game.ts`, from en.onepiece-cardgame.com/news/restriction.html.
 Standard rotation is worked out in `apps/onepiece/scripts/data.mjs`: Block 1 is OP01–OP04, ST01–ST10 and the promos of that time, unless a card was reprinted later.
 Card data and pictures both come from TCGplayer (via TCGCSV).
+
+**Keeping Destiny legal:** nothing to maintain by hand. Cards, legal sets, bans, the restricted list and pairs, and per-format point changes all come from the [A Renewed Hope](https://swdrenewedhope.com/) database each day.
+Community sets are free print-and-play; TCGplayer prices exist only for official Fantasy Flight cards.
 
 **Keeping UniVersus legal:** the ban lists are at the top of `apps/universus/src/game.ts`, from uvsgames.com/news/formats-and-ban-lists/. UVS Games updates them on the first Tuesday of each month.
 Standard rotation (sets from the last three years) is worked out daily by `apps/universus/scripts/data.mjs`.

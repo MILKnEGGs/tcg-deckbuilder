@@ -41,7 +41,7 @@
     <p class="muted small">{buy.unlisted.length ? '' : 'You own everything in this deck.'}</p>
   {/if}
   {#if buy.unlisted.length}
-    <p class="warn small">Not sold on TCGplayer yet, so not in the list: {buy.unlisted.join(', ')}</p>
+    <p class="warn small">Not on TCGplayer, so not in the list: {buy.unlisted.join(', ')}</p>
   {/if}
   {#if buyMaybe?.url}
     <a class="buy maybe" href={buyMaybe.url} target="_blank" rel="noopener">Buy considered cards ({buyMaybe.lines.length}) ↗</a>

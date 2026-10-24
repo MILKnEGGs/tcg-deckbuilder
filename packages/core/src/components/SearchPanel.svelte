@@ -200,7 +200,7 @@
           <span class="count num" class:zero={!n}>{n}{max < 99 ? `/${max}` : ''}</span>
           <button class="step" onclick={() => onAdd(c)} disabled={n >= max || bad} aria-label="Add one {game.label(c)}">+</button>
         {/if}
-        <span class="price num small">{money(c.price)}</span>
+        <span class="price num small">{c.price == null && game.priceNote?.(c) ? game.priceNote(c) : money(c.price)}</span>
       </div>
     </div>
   {/each}

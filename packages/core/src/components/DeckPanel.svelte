@@ -72,25 +72,28 @@
   }
 </script>
 
-<DeckSummary {index} {deck} {format} {issues} />
+<DeckSummary {game} {index} {deck} {format} {issues} />
 
 <div class="command">
   {#each commandZones as z (z.id)}
-    {@const list = (deck.zones[z.id] ?? []).flatMap((e) => Array.from({ length: e.qty }, () => e.id))}
-    {#each list as id, i (id + i)}
+    <!-- One tile per copy, or one per card with a label ("Elite") for games where copies mean dice. -->
+    {@const list = (deck.zones[z.id] ?? []).flatMap((e) => (game.qtyLabel ? [{ id: e.id, qty: e.qty }] : Array.from({ length: e.qty }, () => ({ id: e.id, qty: 1 }))))}
+    {#each list as { id, qty }, i (id + i)}
       {@const c = index.get(id)}
+      {@const tag = c && game.qtyLabel ? game.qtyLabel(c, qty) : null}
       <div class="slot" class:flag-error={flagged.get(id) === 'error'} class:tall={c && !game.image(c).landscape}>
         {#if c}
           <button class="slot-art" onclick={() => onOpen(c)} title={game.label(c)}>
             <img src={game.image(c).src} alt={game.label(c)} />
           </button>
+          {#if tag}<span class="slot-tag">{tag}</span>{/if}
           <button class="slot-x" onclick={() => onRemove(c, z.id)} aria-label="Remove {game.label(c)}">✕</button>
         {:else}
           <span class="muted small">{id}</span>
         {/if}
       </div>
     {/each}
-    {#each Array.from({ length: Math.max(0, z.max - zoneCount(deck, z.id)) }) as _, i (i)}
+    {#each Array.from({ length: Math.max(0, Math.min(z.placeholders ?? z.max, z.max - zoneCount(deck, z.id))) }) as _, i (i)}
       <button class="slot empty" onclick={() => onPick(z.id)}>+ {z.name.replace(/s$/, '')}</button>
     {/each}
   {/each}
@@ -133,7 +136,7 @@
               >
                 {e.owned >= e.qty ? '✓' : ''}{e.qty > 1 ? `${e.owned}/${e.qty}` : e.owned ? '' : 'Own?'}
               </button>
-              <span class="price num small">{money(c?.price != null ? c.price * e.qty : null)}</span>
+              <span class="price num small">{c?.price == null && c && game.priceNote?.(c) ? game.priceNote(c) : money(c?.price != null ? c.price * e.qty : null)}</span>
             </li>
           {/each}
         </ul>
@@ -194,6 +197,17 @@
     border-radius: 50%;
     background: rgb(0 0 0 / 0.7);
     font-size: 0.75rem;
+  }
+  .slot-tag {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.72rem;
+    font-weight: 700;
   }
   .slot.empty {
     border: 1px dashed var(--line);

@@ -61,13 +61,21 @@
   }
 
   const flagged = $derived(new Map(issues.flatMap((i) => (i.cards ?? []).map((id) => [id, i.level] as const))));
+  // One tile per copy, or one per card with a label ("Elite") for games where copies mean dice.
   const commandCards = $derived(
     format.zones
       .filter((z) => z.command)
-      .flatMap((z) => (deck.zones[z.id] ?? []).flatMap((e) => Array.from({ length: e.qty }, () => index.get(e.id))))
-      .filter((c): c is C => !!c),
+      .flatMap((z) =>
+        (deck.zones[z.id] ?? []).flatMap((e) => {
+          const c = index.get(e.id);
+          if (!c) return [];
+          return game.qtyLabel ? [{ c, tag: game.qtyLabel(c, e.qty) }] : Array.from({ length: e.qty }, () => ({ c, tag: null as string | null }));
+        }),
+      ),
   );
-  const missingCommand = $derived(format.zones.filter((z) => z.command && (deck.zones[z.id] ?? []).reduce((n, e) => n + e.qty, 0) < z.max));
+  const missingCommand = $derived(
+    format.zones.filter((z) => z.command && (z.placeholders ?? 1) > 0 && (deck.zones[z.id] ?? []).reduce((n, e) => n + e.qty, 0) < z.max),
+  );
 
   type Row = { e: Entry; c: C };
   type Column = { key: string; title: string; rows: Row[]; kind: 'deck' | 'side' | 'maybe' };
@@ -127,11 +135,12 @@
 {:else}
   <div class="wrap">
     <div class="top">
-      <div class="summary"><DeckSummary {index} {deck} {format} {issues} sticky={false} /></div>
+      <div class="summary"><DeckSummary {game} {index} {deck} {format} {issues} sticky={false} /></div>
       <div class="command">
-        {#each commandCards as c, i (c.id + i)}
+        {#each commandCards as { c, tag }, i (c.id + i)}
           <button class="lead" class:flag-error={flagged.get(c.id) === 'error'} class:tall={!game.image(c).landscape} onclick={() => onOpen(c)} title={game.label(c)}>
             <img src={game.image(c).src} alt={game.label(c)} />
+            {#if tag}<span class="lead-tag">{tag}</span>{/if}
           </button>
         {/each}
         {#each missingCommand as z (z.id)}
@@ -268,6 +277,20 @@
   .lead.tall {
     aspect-ratio: 63 / 88;
     width: min(190px, calc((100% - 24px) / 3));
+  }
+  .lead {
+    position: relative;
+  }
+  .lead-tag {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.8rem;
+    font-weight: 700;
   }
   .lead img {
     width: 100%;
