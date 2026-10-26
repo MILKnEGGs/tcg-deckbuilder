@@ -1,6 +1,6 @@
 <script lang="ts" generics="C extends Card">
   // The Considering list: maybes beside the deck, shown in yellow, each with a button to move it in.
-  import { cycleOwned } from '../deck';
+  import { cycleOwned, deckOrder } from '../deck';
   import type { Card, CardIndex, Deck, GameDef } from '../types';
   import { money } from '../util';
 
@@ -25,7 +25,7 @@
   const rows = $derived(
     (deck.considering ?? [])
       .map((e) => ({ e, c: index.get(e.id) }))
-      .sort((a, b) => (a.c && b.c ? (game.cost(a.c) ?? 0) - (game.cost(b.c) ?? 0) || game.label(a.c).localeCompare(game.label(b.c)) : 0)),
+      .sort((a, b) => (a.c && b.c ? deckOrder(game)(a.c, b.c) : 0)),
   );
 </script>
 

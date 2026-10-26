@@ -200,6 +200,8 @@ export interface GameDef<C extends Card> {
   groups: string[];
   /** Cost for sorting and the cost curve; null for cards without one. */
   cost(card: C): number | null;
+  /** Order of cards within each deck group (default: cost, then name). Flesh and Blood: red, yellow, blue, then name. */
+  deckOrder?(a: C, b: C): number;
   image(card: C): { src: string; back?: string; landscape?: boolean };
   /** Cards have no single cost (Pokémon), so the cost curve is left out. */
   noCostCurve?: boolean;

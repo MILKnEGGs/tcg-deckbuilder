@@ -200,3 +200,8 @@ export function massEntry<C extends Card>(game: GameDef<C>, deck: Deck, cards: C
     : null;
   return { url, lines, unlisted };
 }
+
+/** How cards sort within a group in the deck list and Deck view: the game's order, or cost then name. */
+export function deckOrder<C extends Card>(game: GameDef<C>): (a: C, b: C) => number {
+  return game.deckOrder ?? ((a, b) => (game.cost(a) ?? 0) - (game.cost(b) ?? 0) || game.label(a).localeCompare(game.label(b)));
+}

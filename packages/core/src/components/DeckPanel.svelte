@@ -1,6 +1,6 @@
 <script lang="ts" generics="C extends Card">
   // The Build view's deck list: summary, command cards (leaders/bases), the list by group, Considering.
-  import { cycleOwned, setQty, zoneCount } from '../deck';
+  import { cycleOwned, deckOrder, setQty, zoneCount } from '../deck';
   import type { Card, CardIndex, Deck, Entry, FormatDef, GameDef, Issue } from '../types';
   import { money } from '../util';
   import Badges from './Badges.svelte';
@@ -59,7 +59,7 @@
       .sort(([a], [b]) => order(a) - order(b))
       .map(([g, list]) => [
         g,
-        list.sort((a, b) => (a.c && b.c ? (game.cost(a.c) ?? 0) - (game.cost(b.c) ?? 0) || game.label(a.c).localeCompare(game.label(b.c)) : 0)),
+        list.sort((a, b) => (a.c && b.c ? deckOrder(game)(a.c, b.c) : 0)),
       ]);
   }
 

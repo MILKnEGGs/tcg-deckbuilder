@@ -1,6 +1,7 @@
 <script lang="ts" generics="C extends Card">
   // The Deck view: the deck alone, for reviewing and refining. Leaders/bases up top, then each group
   // as a column of overlapping cards (hover or tap to see one), Considering in yellow, then stats.
+  import { deckOrder } from '../deck';
   import type { Card, CardIndex, Deck, Entry, FormatDef, GameDef, Issue } from '../types';
   import { plural } from '../util';
   import CostCurve from './CostCurve.svelte';
@@ -81,7 +82,7 @@
 
   type Row = { e: Entry; c: C };
   type Column = { key: string; title: string; rows: Row[]; kind: 'deck' | 'side' | 'maybe' };
-  const byCost = (a: Row, b: Row) => (game.cost(a.c) ?? 0) - (game.cost(b.c) ?? 0) || game.label(a.c).localeCompare(game.label(b.c));
+  const byCost = (a: Row, b: Row) => deckOrder(game)(a.c, b.c);
   const rowsOf = (list: Entry[]) => list.map((e) => ({ e, c: index.get(e.id) })).filter((r): r is Row => !!r.c);
 
   const columns = $derived.by(() => {

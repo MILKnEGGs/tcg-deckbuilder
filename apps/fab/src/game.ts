@@ -283,6 +283,8 @@ export const game: GameDef<FabCard> = {
   group,
   groups: ['Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'],
   cost: (c) => (isArena(c) || c.kind === 'Hero' ? null : numOrNull(c.cost)),
+  // Within each group: red, yellow, blue (colourless first), then name.
+  deckOrder: (a, b) => (a.pitch ?? 0) - (b.pitch ?? 0) || a.name.localeCompare(b.name),
   image: (c) => ({ src: c.img ?? '' }),
   meters: (deck, cards, format) => [
     { label: 'card pool', value: rows(deck, cards).filter((x) => x.z !== 'hero').reduce((n, x) => n + x.e.qty, 0), max: fmt(format).pool },

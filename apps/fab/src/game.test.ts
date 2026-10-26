@@ -109,6 +109,14 @@ describe('fab validation', () => {
   });
 });
 
+describe('fab deck order', () => {
+  it('sorts each group red, yellow, blue, then by name', () => {
+    const yellow = card('Apex', { pitch: 2, color: 'Yellow' });
+    const sorted = [snatchB, warrior, yellow, snatchR, legendary].sort(game.deckOrder!).map((c) => `${c.name} ${c.color ?? ''}`.trim());
+    expect(sorted).toEqual(['Crown of Seeds', 'Snatch Red', 'Steelblade Supremacy Red', 'Apex Yellow', 'Snatch Blue']);
+  });
+});
+
 describe('fab decklists', () => {
   it('round-trips the Fabrary text format', () => {
     const d = deckOf([[dori, 1], [sword, 1], [snatchR, 3], [snatchB, 2], [warrior, 2, 'side']]);
