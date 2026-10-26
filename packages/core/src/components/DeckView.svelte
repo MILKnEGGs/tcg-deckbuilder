@@ -34,7 +34,8 @@
     say: (msg: string) => void;
     onAdd: (c: C, zone?: string) => void;
     onRemove: (c: C, zone?: string) => void;
-    onOpen: (c: C) => void;
+    /** `list`: the cards in on-screen order, for stepping through them in the card view. */
+    onOpen: (c: C, list?: C[]) => void;
     onPick: (zone: string) => void;
     onConsider: (c: C, n?: number) => void;
     onPromote: (c: C) => void;
@@ -100,6 +101,9 @@
     return cols;
   });
 
+  // Every card in the order shown: leaders and the like, then each stack top to bottom, left to right.
+  const shown = $derived([...new Set(commandCards.map((x) => x.c))].concat(columns.flatMap((col) => col.rows.map((r) => r.c))));
+
   // Breakdown of the main deck by the game's chosen filters (aspects, arenas, …).
   const breakdown = $derived(
     (game.stats ?? [])
@@ -138,7 +142,7 @@
       <div class="summary"><DeckSummary {game} {index} {deck} {format} {issues} sticky={false} /></div>
       <div class="command">
         {#each commandCards as { c, tag }, i (c.id + i)}
-          <button class="lead" class:flag-error={flagged.get(c.id) === 'error'} class:tall={!game.image(c).landscape} onclick={() => onOpen(c)} title={game.label(c)}>
+          <button class="lead" class:flag-error={flagged.get(c.id) === 'error'} class:tall={!game.image(c).landscape} onclick={() => onOpen(c, shown)} title={game.label(c)}>
             <img src={game.image(c).src} alt={game.label(c)} />
             {#if tag}<span class="lead-tag">{tag}</span>{/if}
           </button>
@@ -164,7 +168,7 @@
                 class="card"
                 class:flag-error={flagged.get(c.id) === 'error'}
                 class:flag-warning={flagged.get(c.id) === 'warning'}
-                onclick={() => onOpen(c)}
+                onclick={() => onOpen(c, shown)}
                 title="{e.qty} × {game.label(c)}{miss ? ` (${miss})` : ''}"
               >
                 <img src={game.image(c).src} alt={game.label(c)} loading="lazy" decoding="async" />

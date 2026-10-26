@@ -20,6 +20,13 @@
   let target = $state<'deck' | 'considering'>('deck');
   let onlyZone = $state<string | null>(null);
   let viewing = $state<C | null>(null);
+  // The cards the open one was picked from (the Deck view's stacks), for its previous/next arrows.
+  let browse = $state<C[] | null>(null);
+  const at = $derived(viewing && browse ? browse.findIndex((c) => c.id === viewing!.id) : -1);
+  function open(c: C, list?: C[]) {
+    viewing = c;
+    browse = list ?? null;
+  }
   let goldfish = $state(false);
   let toast = $state('');
   let toastTimer: ReturnType<typeof setTimeout>;
@@ -147,7 +154,7 @@
   }
 
   const deckCount = $derived(deck ? Object.values(deck.zones).reduce((n, l) => n + l.reduce((m, e) => m + e.qty, 0), 0) : 0);
-  const shared = $derived({ changed, say, onAdd: add, onRemove: remove, onOpen: (c: C) => (viewing = c), onPick: pick, onConsider: consider, onPromote: promote, onDemote: demote });
+  const shared = $derived({ changed, say, onAdd: add, onRemove: remove, onOpen: open, onPick: pick, onConsider: consider, onPromote: promote, onDemote: demote });
 </script>
 
 {#if missing}
@@ -196,7 +203,7 @@
 
     <div class="layout">
       <section class="search" class:hide={tab !== 'search'}>
-        <SearchPanel {game} {data} {index} {deck} {format} bind:onlyZone bind:target onAdd={add} onRemove={remove} onConsider={consider} onOpen={(c) => (viewing = c)} />
+        <SearchPanel {game} {data} {index} {deck} {format} bind:onlyZone bind:target onAdd={add} onRemove={remove} onConsider={consider} onOpen={(c) => open(c)} />
       </section>
       <section class="deck" class:hide={tab !== 'deck'}>
         <DeckPanel {game} {index} {deck} {format} {issues} {...shared} />
@@ -205,7 +212,18 @@
   {/if}
 
   {#if viewing}
-    <CardModal {game} {index} {deck} {format} card={viewing} {...shared} onClose={() => (viewing = null)} />
+    <CardModal
+      {game}
+      {index}
+      {deck}
+      {format}
+      card={viewing}
+      {...shared}
+      onPrev={at > 0 ? () => (viewing = browse![at - 1]) : undefined}
+      onNext={at >= 0 && at < browse!.length - 1 ? () => (viewing = browse![at + 1]) : undefined}
+      position={at >= 0 ? `${at + 1} of ${browse!.length}` : undefined}
+      onClose={() => (viewing = browse = null)}
+    />
   {/if}
 
   {#if goldfish && game.goldfish}

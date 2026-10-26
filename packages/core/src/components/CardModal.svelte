@@ -16,6 +16,9 @@
     onConsider,
     onPromote,
     onDemote,
+    onPrev,
+    onNext,
+    position,
     onClose,
   }: {
     game: GameDef<C>;
@@ -28,6 +31,11 @@
     onConsider: (c: C, n?: number) => void;
     onPromote: (c: C) => void;
     onDemote: (c: C, zone: string) => void;
+    /** Step to the card before or after this one in the stacks it was opened from. */
+    onPrev?: () => void;
+    onNext?: () => void;
+    /** "3 of 24", shown when stepping through cards. */
+    position?: string;
     onClose: () => void;
   } = $props();
 
@@ -43,12 +51,32 @@
   const why = $derived(game.illegal?.(card, format) ?? null);
 
   onMount(() => dialog?.showModal());
+  // A new card shows its front.
+  $effect(() => {
+    void card.id;
+    flipped = false;
+  });
+
+  function keys(e: KeyboardEvent) {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (e.key === 'ArrowLeft' && onPrev) onPrev();
+    else if (e.key === 'ArrowRight' && onNext) onNext();
+    else return;
+    e.preventDefault();
+  }
 </script>
 
-<dialog bind:this={dialog} onclose={onClose} onclick={(e) => e.target === dialog && dialog?.close()}>
+<dialog bind:this={dialog} onclose={onClose} onclick={(e) => e.target === dialog && dialog?.close()} onkeydown={keys}>
   <div class="body">
     <div class="pic" class:wide={img.landscape}>
-      <img src={flipped && img.back ? img.back : img.src} alt={game.label(card)} />
+      <div class="frame">
+        <img src={flipped && img.back ? img.back : img.src} alt={game.label(card)} />
+        {#if onPrev || onNext}
+          <button class="step prev" onclick={onPrev} disabled={!onPrev} aria-label="Previous card" title="Previous card (←)">‹</button>
+          <button class="step next" onclick={onNext} disabled={!onNext} aria-label="Next card" title="Next card (→)">›</button>
+        {/if}
+      </div>
+      {#if position}<span class="small muted num">{position}</span>{/if}
       {#if img.back}
         <button class="small" onclick={() => (flipped = !flipped)}>{flipped ? 'Show front' : 'Show back'}</button>
       {/if}
@@ -126,6 +154,41 @@
     width: 100%;
     border-radius: 12px;
     display: block;
+  }
+  .frame {
+    position: relative;
+    width: 100%;
+  }
+  .pic.wide .frame {
+    max-width: 480px;
+  }
+  /* Previous/next arrows over the picture's edges, big enough to tap. */
+  .step {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 56px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: rgb(0 0 0 / 0.55);
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .step.prev {
+    left: 6px;
+  }
+  .step.next {
+    right: 6px;
+  }
+  .step:hover:not(:disabled) {
+    background: rgb(0 0 0 / 0.8);
+  }
+  .step:disabled {
+    opacity: 0.25;
+    cursor: default;
   }
   .body:has(.pic.wide) {
     grid-template-columns: 1fr;
