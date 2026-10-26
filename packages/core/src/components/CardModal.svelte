@@ -67,15 +67,13 @@
 </script>
 
 <dialog bind:this={dialog} onclose={onClose} onclick={(e) => e.target === dialog && dialog?.close()} onkeydown={keys}>
+  <div class="stepper" class:on={onPrev || onNext}>
+  {#if onPrev || onNext}
+    <button class="edge" onclick={onPrev} disabled={!onPrev} aria-label="Previous card" title="Previous card (←)">‹</button>
+  {/if}
   <div class="body">
     <div class="pic" class:wide={img.landscape}>
-      <div class="frame">
-        <img src={flipped && img.back ? img.back : img.src} alt={game.label(card)} />
-        {#if onPrev || onNext}
-          <button class="step prev" onclick={onPrev} disabled={!onPrev} aria-label="Previous card" title="Previous card (←)">‹</button>
-          <button class="step next" onclick={onNext} disabled={!onNext} aria-label="Next card" title="Next card (→)">›</button>
-        {/if}
-      </div>
+      <img src={flipped && img.back ? img.back : img.src} alt={game.label(card)} />
       {#if position}<span class="small muted num">{position}</span>{/if}
       {#if img.back}
         <button class="small" onclick={() => (flipped = !flipped)}>{flipped ? 'Show front' : 'Show back'}</button>
@@ -131,12 +129,19 @@
       {/if}
     </div>
   </div>
+  {#if onPrev || onNext}
+    <button class="edge" onclick={onNext} disabled={!onNext} aria-label="Next card" title="Next card (→)">›</button>
+  {/if}
+  </div>
   <button class="close ghost" onclick={() => dialog?.close()} aria-label="Close">✕</button>
 </dialog>
 
 <style>
   dialog {
     max-width: min(820px, calc(100vw - 24px));
+  }
+  dialog:has(.stepper.on) {
+    max-width: min(900px, calc(100vw - 16px));
   }
   .body {
     display: grid;
@@ -155,40 +160,35 @@
     border-radius: 12px;
     display: block;
   }
-  .frame {
-    position: relative;
-    width: 100%;
+  /* Previous/next arrows down the popup's left and right edges, staying centred while it scrolls. */
+  .stepper.on {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
   }
-  .pic.wide .frame {
-    max-width: 480px;
-  }
-  /* Previous/next arrows over the picture's edges, big enough to tap. */
-  .step {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 56px;
+  .edge {
+    position: sticky;
+    top: calc(50% - 40px);
+    align-self: start;
+    width: 36px;
+    height: 80px;
+    margin: 0 4px;
     padding: 0;
-    border: 0;
     border-radius: 10px;
-    background: rgb(0 0 0 / 0.55);
-    color: #fff;
+    background: var(--panel-2);
     font-size: 2rem;
     line-height: 1;
   }
-  .step.prev {
-    left: 6px;
+  .edge:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
   }
-  .step.next {
-    right: 6px;
-  }
-  .step:hover:not(:disabled) {
-    background: rgb(0 0 0 / 0.8);
-  }
-  .step:disabled {
+  .edge:disabled {
     opacity: 0.25;
     cursor: default;
+  }
+  .stepper.on .body {
+    padding-left: 4px;
+    padding-right: 4px;
   }
   .body:has(.pic.wide) {
     grid-template-columns: 1fr;
