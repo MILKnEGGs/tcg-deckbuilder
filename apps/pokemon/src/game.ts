@@ -5,6 +5,7 @@
 // Star card. Standard is the current rotation (legality comes with the card data from TCGdex);
 // Expanded is Black & White onward with the banned list below.
 
+import { taggedCard } from '@milk/core/import';
 import { legalityIssues, sizeIssues, unknownCards } from '@milk/core/rules';
 import type { Badge, Card, CardIndex, Deck, Entry, FormatDef, GameDef, Imported, Issue } from '@milk/core/types';
 import { money } from '@milk/core/util';
@@ -184,7 +185,8 @@ function liveName(c: PkCard): string {
     const sym = Object.keys(ENERGY_SYMBOLS).find((k) => `${ENERGY_SYMBOLS[k]} Energy` === c.name);
     if (sym && SVE_NUMBER[sym]) return `Basic {${sym}} Energy SVE ${SVE_NUMBER[sym]}`;
   }
-  return c.code ? `${c.name} ${normCode(c.code)}` : c.name;
+  // Cards Pokémon TCG Live doesn't have (some promos) carry our id instead, so our own import finds them.
+  return c.code ? `${c.name} ${normCode(c.code)}` : `${c.name} [${c.id}]`;
 }
 
 function exportDeck(deck: Deck, cards: CardIndex<PkCard>): string {
@@ -206,7 +208,16 @@ function importDeck(text: string, cards: CardIndex<PkCard>): Imported {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || /^(pok[eé]mon|trainer|energy|total cards)\s*[:(]/i.test(line) || line.startsWith('//') || line.startsWith('#')) continue;
-    const m = /^(\d+)\s+(.+?)(?:\s+([A-Z][A-Z0-9-]{1,7})\s+([A-Z]*\d+[a-z]?))?$/.exec(line);
+    const tagged = taggedCard(line, cards);
+    if (tagged) {
+      const qty = Number(/^(\d+)/.exec(line)?.[1] ?? 1);
+      const e = main.find((x) => x.id === tagged.id);
+      if (e) e.qty += qty;
+      else main.push({ id: tagged.id, qty, owned: 0 });
+      continue;
+    }
+    // Set codes have a letter but may start with a digit ("30C 58"); numbers may end in a letter ("75A").
+    const m = /^(\d+)\s+(.+?)(?:\s+((?=[A-Z0-9-]*[A-Z])[A-Z0-9][A-Z0-9-]{1,7})\s+([A-Z]*\d+[A-Za-z]?))?$/.exec(line);
     if (!m) {
       skipped.push(line);
       continue;

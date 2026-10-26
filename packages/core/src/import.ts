@@ -12,6 +12,28 @@ const norm = (s: string) =>
     .trim();
 
 /**
+ * A card id in square brackets ("2 A-Wing [24064]", before any "// comment") names that exact card. Our own
+ * exports add it where a name alone could mean several cards, so lists shared between copies of the app
+ * come back exactly.
+ */
+const ID_TAG = /\[([^\]\s]+)\]\s*(?:\/\/.*)?$/;
+export function taggedCard<C extends Card>(line: string, cards: CardIndex<C>): C | undefined {
+  const m = ID_TAG.exec(line.trim());
+  return m ? cards.get(m[1]) : undefined;
+}
+
+/** Turns a card into its list text (`key`), adding " [id]" when other cards share that text. */
+export function listNamer<C extends Card>(cards: CardIndex<C>, key: (c: C) => string): (c: C) => string {
+  const count = new Map<string, number>();
+  for (const c of new Set(cards.values())) {
+    const k = norm(key(c));
+    count.set(k, (count.get(k) ?? 0) + 1);
+  }
+  // Names with "//" (two-sided cards) get the id too: import reads "//" as the start of a comment.
+  return (c) => ((count.get(norm(key(c))) ?? 0) > 1 || key(c).includes('//') ? `${key(c)} [${c.id}]` : key(c));
+}
+
+/**
  * Lines look like "3 Name", "3x Name" or just "Name". A card matches on its full label or, failing
  * that, its name when only one card has it. A heading containing "sideboard" sends later lines there.
  */
@@ -37,9 +59,12 @@ export function parseTextDeck<C extends Card>(game: GameDef<C>, text: string, ca
       continue;
     }
     const qty = m ? Number(m[1]) : 1;
-    // Some lists add the set and number in brackets or parentheses; ignore them.
-    const name = norm((m ? m[2] : line).replace(/\s*[[(][^\])]*[\])]\s*$/, ''));
-    const card = byLabel.get(name) ?? byLabel.get(name.replace(/ - /, ', ')) ?? byName.get(name) ?? null;
+    // Some lists add the set and number in brackets or parentheses; ignore them, unless they're part of the
+    // name ("A Titan (Small)").
+    const full = norm(m ? m[2] : line);
+    const name = norm(full.replace(/\s*[[(][^\])]*[\])]\s*$/, ''));
+    const card =
+      taggedCard(raw, cards) ?? byLabel.get(full) ?? byName.get(full) ?? byLabel.get(name) ?? byLabel.get(name.replace(/ - /, ', ')) ?? byName.get(name) ?? null;
     if (!card) {
       skipped.push(raw.trim());
       continue;

@@ -53,7 +53,8 @@ console.log(`TCGCSV: ${prices.size} Lorcana prices`);
 
 const byCard = new Map();
 for (const p of printings) {
-  const key = `${p.name}|${p.version ?? ''}`.toLowerCase();
+  // Reprints sometimes spell the apostrophe differently ("I Find ’Em" / "I Find 'Em"); they're one card.
+  const key = `${p.name}|${p.version ?? ''}`.toLowerCase().replace(/[’‘`]/g, "'");
   (byCard.get(key) ?? byCard.set(key, []).get(key)).push(p);
 }
 

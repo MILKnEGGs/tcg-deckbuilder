@@ -11,7 +11,7 @@
 //
 // In the team zone an entry's quantity is its dice: a unique character with qty 2 is elite.
 
-import { parseTextDeck } from '@milk/core/import';
+import { listNamer, parseTextDeck } from '@milk/core/import';
 import { exactZone, legalityIssues, misplaced, sizeIssues, unknownCards } from '@milk/core/rules';
 import type { Badge, Card, CardIndex, Deck, FormatDef, GameDef, Imported, Issue } from '@milk/core/types';
 import { money } from '@milk/core/util';
@@ -318,10 +318,11 @@ const PLURAL: Record<string, string> = {
 };
 
 function exportDeck(deck: Deck, cards: CardIndex<SwdCard>): string {
+  const name = listNamer(cards, label);
   const lines = (zone: string) =>
     (deck.zones[zone] ?? []).map((e) => {
       const c = cards.get(e.id);
-      return `${e.qty} ${c ? label(c) : e.id}${zone === 'team' && c?.unique && e.qty > 1 ? '  // elite' : ''}`;
+      return `${e.qty} ${c ? name(c) : e.id}${zone === 'team' && c?.unique && e.qty > 1 ? '  // elite' : ''}`;
     });
   return [
     ['Characters', ...lines('team')],

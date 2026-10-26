@@ -7,7 +7,7 @@
 //    primary; with several attuned symbols, the character needs any one of them.
 
 import { exactZone, legalityIssues, sizeIssues, unknownCards } from '@milk/core/rules';
-import { parseTextDeck } from '@milk/core/import';
+import { listNamer, parseTextDeck } from '@milk/core/import';
 import type { Badge, Card, CardIndex, Deck, Entry, FormatDef, GameDef, Imported, Issue } from '@milk/core/types';
 import { money } from '@milk/core/util';
 
@@ -301,7 +301,12 @@ export function badges(c: UvsCard): Badge[] {
 const PLURAL: Record<string, string> = { Character: 'Characters', Attack: 'Attacks', Foundation: 'Foundations', Action: 'Actions', Asset: 'Assets', Backup: 'Backups', Arena: 'Arenas' };
 
 function exportDeck(deck: Deck, cards: CardIndex<UvsCard>): string {
-  const lines = (zone: string) => (deck.zones[zone] ?? []).map((e) => `${e.qty} ${cards.get(e.id)?.name ?? e.id}`);
+  const name = listNamer(cards, (c) => c.name);
+  const lines = (zone: string) =>
+    (deck.zones[zone] ?? []).map((e) => {
+      const c = cards.get(e.id);
+      return `${e.qty} ${c ? name(c) : e.id}`;
+    });
   const parts = [['Character', ...lines('character')], ['Deck', ...lines('main')]];
   if (deck.zones.side?.length) parts.push(['Sideboard', ...lines('side')]);
   return parts.map((p) => p.join('\n')).join('\n\n');

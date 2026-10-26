@@ -12,6 +12,7 @@
 //
 // Which cards are legal, banned or suspended in each format comes with the card data (the-fab-cube).
 
+import { listNamer, taggedCard } from '@milk/core/import';
 import { copyIssues, legalityIssues, sizeIssues, unknownCards } from '@milk/core/rules';
 import type { Badge, Card, CardIndex, Deck, Entry, FormatDef, GameDef, Imported, Issue } from '@milk/core/types';
 import { money } from '@milk/core/util';
@@ -189,7 +190,8 @@ const isArena = (c: FabCard) => c.kind === 'Weapon' || c.kind === 'Equipment';
 const norm = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').trim();
 
 function exportDeck(deck: Deck, cards: CardIndex<FabCard>): string {
-  const lines = (zone: string) => rows(deck, cards, [zone]).map((x) => `${x.e.qty}x ${label(x.c)}`);
+  const name = listNamer(cards, label);
+  const lines = (zone: string) => rows(deck, cards, [zone]).map((x) => `${x.e.qty}x ${name(x.c)}`);
   const hero = heroOf(deck, cards);
   const format = formats.find((f) => f.id === deck.format);
   const out = [`Name: ${deck.name}`, ...(hero ? [`Hero: ${hero.name}`] : []), ...(format ? [`Format: ${format.name}`] : []), ''];
@@ -238,7 +240,7 @@ function importDeck(text: string, cards: CardIndex<FabCard>): Imported {
       continue;
     }
     const want = norm(m[2]);
-    const card = byLabel.get(want) ?? byName.get(want.replace(/\s*\((red|yellow|blue)\)$/, ''));
+    const card = taggedCard(raw, cards) ?? byLabel.get(want) ?? byName.get(want.replace(/\s*\((red|yellow|blue)\)$/, ''));
     if (!card) {
       skipped.push(line);
       continue;

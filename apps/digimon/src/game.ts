@@ -104,7 +104,8 @@ function validate(deck: Deck, cards: CardIndex<DigiCard>, format: FormatDef): Is
 // Decklists: "4 Agumon BT1-010" lines (what most Digimon sites export), or the Tabletop Simulator
 // JSON array of card numbers that digimoncard.io and DigimonMeta use.
 
-const CARD_NUMBER = /\b((?:BT|EX|ST|RB|LM|AD)\d{1,2}-\d{2,3}|P-\d{3})\b/i;
+// "BT1-084", "EX10-012", "P-001", or the newer "LM-021" with no set number.
+const CARD_NUMBER = /\b((?:BT|EX|ST|RB|LM|AD)\d{0,2}-\d{2,3}|P-\d{3})\b/i;
 
 function exportDeck(deck: Deck, cards: CardIndex<DigiCard>): string {
   const lines = (list: Entry[]) => list.map((e) => `${e.qty} ${cards.get(e.id)?.name ?? ''} ${e.id}`.replace(/\s+/g, ' '));

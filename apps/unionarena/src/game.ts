@@ -114,7 +114,8 @@ function validate(deck: Deck, cards: CardIndex<UaCard>, format: FormatDef): Issu
 // ---------------------------------------------------------------------------------------------
 // Decklists: one card per line with its number ("4 CSM-1-001 Kobeni", "4x UE22BT/CSM-1-001").
 
-const CARD_NUMBER = /(?:[A-Z0-9]+\/)?([A-Z0-9]{3}-\d+-\d{3})/i;
+// "UA01BT/JJK-1-001", or a promo like "NIK-P-001".
+const CARD_NUMBER = /(?:[A-Z0-9]+\/)?([A-Z0-9]{3}-(?:\d+|P)-\d{3})/i;
 
 function exportDeck(deck: Deck, cards: CardIndex<UaCard>): string {
   return [`// ${deck.name}`, ...(deck.zones.main ?? []).map((e) => `${e.qty} ${e.id} ${cards.get(e.id)?.name ?? ''}`.trim())].join('\n');
