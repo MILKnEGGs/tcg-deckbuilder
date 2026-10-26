@@ -5,6 +5,7 @@
   import { plural } from '../util';
   import CostCurve from './CostCurve.svelte';
   import DeckActions from './DeckActions.svelte';
+  import DeckDescription from './DeckDescription.svelte';
   import DeckPanel from './DeckPanel.svelte';
   import DeckSummary from './DeckSummary.svelte';
 
@@ -152,6 +153,8 @@
         {/each}
       </div>
     </div>
+
+    <div class="desc"><DeckDescription {deck} {changed} /></div>
 
     {#if !columns.length}
       <p class="empty-deck muted">No cards yet. Switch to <strong>Build</strong> to add some.</p>

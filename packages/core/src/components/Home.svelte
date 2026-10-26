@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { deleteDeck, listDecks, putDeck } from '../db';
   import { newDeck, sizeOf, totals } from '../deck';
+  import { takeDescription } from '../description';
   import type { Card, CardData, CardIndex, Deck, GameDef, Imported } from '../types';
   import { fmtDate, money, plural, uid } from '../util';
 
@@ -46,7 +47,8 @@
     imported = null;
     if (!importText.trim()) return;
     try {
-      imported = game.importDeck(importText, index, game.formats);
+      const { text, description } = takeDescription(importText);
+      imported = { ...game.importDeck(text, index, game.formats), ...(description ? { description } : {}) };
       if (imported.format) importFormat = imported.format;
     } catch (e) {
       importError = (e as Error).message;
@@ -57,6 +59,7 @@
     if (!imported) return;
     const f = game.formats.find((x) => x.id === importFormat)!;
     const d = newDeck(f, imported.name ?? `Imported ${f.name} deck`);
+    if (imported.description) d.description = imported.description;
     for (const [zone, list] of Object.entries(imported.zones)) {
       // Zones this format lacks (a sideboard in a format without one) join the main deck.
       const target = f.zones.some((z) => z.id === zone) ? zone : 'main';

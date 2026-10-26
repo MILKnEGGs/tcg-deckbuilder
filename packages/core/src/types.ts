@@ -43,7 +43,8 @@ export interface Deck {
   considering?: Entry[];
   /** Game-specific deck settings (UniVersus' primary symbol). Missing means "pick automatically". */
   options?: Record<string, string>;
-  notes?: string;
+  /** What the deck does and how to play it. Travels with exported lists. */
+  description?: string;
 }
 
 /** error: the deck isn't legal yet. warning: legal or nearly, but worth a look (too many cards, cost penalties). */
@@ -169,6 +170,8 @@ export interface Imported {
   zones: Record<string, Entry[]>;
   /** Lines or ids that didn't match any card. */
   skipped: string[];
+  /** The deck's description, when the list carries one. */
+  description?: string;
 }
 
 export interface GameDef<C extends Card> {

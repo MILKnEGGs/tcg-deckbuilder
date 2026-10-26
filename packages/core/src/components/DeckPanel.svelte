@@ -7,6 +7,7 @@
   import Considering from './Considering.svelte';
   import CostCurve from './CostCurve.svelte';
   import DeckActions from './DeckActions.svelte';
+  import DeckDescription from './DeckDescription.svelte';
   import DeckSummary from './DeckSummary.svelte';
 
   let {
@@ -151,6 +152,8 @@
     <CostCurve {game} {index} {deck} />
   </section>
 {/if}
+
+<DeckDescription {deck} {changed} />
 
 <DeckActions {game} {index} {deck} {format} {changed} {say} />
 
