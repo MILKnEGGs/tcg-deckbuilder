@@ -33,7 +33,7 @@ export function takeDescription(text: string): { text: string; description?: str
   return { text: lines.slice(0, at).join('\n'), description: description || undefined };
 }
 
-function asObject(text: string): Record<string, unknown> | null {
+export function asObject(text: string): Record<string, unknown> | null {
   const t = text.trim();
   if (!t.startsWith('{')) return null;
   try {

@@ -240,13 +240,17 @@ function importDeck(text: string, cards: CardIndex<FabCard>): Imported {
       }
       continue;
     }
-    const m = /^(\d+)\s*x?\s+(.+)$/i.exec(line);
+    const m = /^(\d+)x?\s+(.+)$/i.exec(line);
     if (!m) {
       side = /sideboard|side board/i.test(line); // a heading ("Arena cards", "Deck cards", "Sideboard")
       continue;
     }
-    const want = norm(m[2]);
-    const card = taggedCard(raw, cards) ?? byLabel.get(want) ?? byName.get(want.replace(/\s*\((red|yellow|blue)\)$/, ''));
+    const find = (text: string) => {
+      const want = norm(text);
+      return byLabel.get(want) ?? byName.get(want.replace(/\s*\((red|yellow|blue)\)$/, ''));
+    };
+    // "3x Name" or "3 Name"; a separate "3 x Name" only when the name isn't a card.
+    const card = taggedCard(raw, cards) ?? find(m[2]) ?? (/^x\s+/i.test(m[2]) ? find(m[2].replace(/^x\s+/i, '')) : undefined);
     if (!card) {
       skipped.push(line);
       continue;

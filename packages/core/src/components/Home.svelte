@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { deleteDeck, listDecks, putDeck } from '../db';
   import { newDeck, sizeOf, totals } from '../deck';
+  import { takeConsidering } from '../considering';
   import { takeDescription } from '../description';
   import type { Card, CardData, CardIndex, Deck, GameDef, Imported } from '../types';
   import { fmtDate, money, plural, uid } from '../util';
@@ -48,7 +49,9 @@
     if (!importText.trim()) return;
     try {
       const { text, description } = takeDescription(importText);
-      imported = { ...game.importDeck(text, index, game.formats), ...(description ? { description } : {}) };
+      const maybe = takeConsidering(text, game, index, game.formats[0]);
+      const list = game.importDeck(maybe.text, index, game.formats);
+      imported = { ...list, skipped: [...list.skipped, ...maybe.skipped], ...(description ? { description } : {}), ...(maybe.considering ? { considering: maybe.considering } : {}) };
       if (imported.format) importFormat = imported.format;
     } catch (e) {
       importError = (e as Error).message;
@@ -60,6 +63,7 @@
     const f = game.formats.find((x) => x.id === importFormat)!;
     const d = newDeck(f, imported.name ?? `Imported ${f.name} deck`);
     if (imported.description) d.description = imported.description;
+    if (imported.considering) d.considering = imported.considering.map((e) => ({ ...e }));
     for (const [zone, list] of Object.entries(imported.zones)) {
       // Zones this format lacks (a sideboard in a format without one) join the main deck.
       const target = f.zones.some((z) => z.id === zone) ? zone : 'main';
@@ -170,7 +174,8 @@
     {#if importError}<p class="error small">{importError}</p>{/if}
     {#if imported}
       {@const count = Object.values(imported.zones).flat().reduce((n, e) => n + e.qty, 0)}
-      <p class="small">Found {plural(count, 'card')}{imported.name ? ` in "${imported.name}"` : ''}.</p>
+      {@const maybeCount = (imported.considering ?? []).reduce((n, e) => n + e.qty, 0)}
+      <p class="small">Found {plural(count, 'card')}{imported.name ? ` in "${imported.name}"` : ''}{maybeCount ? `, plus ${maybeCount} considering` : ''}.</p>
       {#if imported.skipped.length}
         <p class="error small">Not recognised ({imported.skipped.length}): {imported.skipped.slice(0, 8).join(', ')}{imported.skipped.length > 8 ? '…' : ''}</p>
       {/if}

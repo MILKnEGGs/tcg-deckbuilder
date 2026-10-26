@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { addCard, indexCards, newDeck } from './deck';
+import { addConsidering, takeConsidering } from './considering';
 import { addDescription, takeDescription } from './description';
 import type { Card, CardData, CardIndex, Deck, FormatDef, GameDef } from './types';
 
@@ -70,11 +71,16 @@ export function roundTripSuite<C extends Card>(game: GameDef<C>, found: Record<s
         it(`${format.name} deck ${seed}`, () => {
           const deck = randomDeck(game, data.cards, index, format, seed);
           deck.description = `How to play deck ${seed}:\n\nMulligan for your best opener.\nDescription: lines like this one stay in the text.`;
-          const shared = addDescription(game.exportDeck(deck, index), deck.description);
+          // A few maybes, from anywhere in the card list.
+          const extra = randomDeck(game, data.cards, index, format, seed + 1000);
+          deck.considering = Object.values(extra.zones).flat().slice(0, 5).map((e) => ({ ...e, qty: Math.min(e.qty, 2), owned: 0 }));
+          const shared = addDescription(addConsidering(game.exportDeck(deck, index), deck, game, index), deck.description);
           const { text, description } = takeDescription(shared);
-          const back = game.importDeck(text, index, game.formats);
-          expect(back.skipped, 'lines the import did not recognise').toEqual([]);
+          const maybe = takeConsidering(text, game, index, game.formats[0]);
+          const back = game.importDeck(maybe.text, index, game.formats);
+          expect([...back.skipped, ...maybe.skipped], 'lines the import did not recognise').toEqual([]);
           expect(shape(back.zones, index as CardIndex<Card>)).toEqual(shape(deck.zones, index as CardIndex<Card>));
+          expect(shape({ considering: maybe.considering ?? [] }, index as CardIndex<Card>)).toEqual(shape({ considering: deck.considering }, index as CardIndex<Card>));
           expect(description).toBe(deck.description);
         });
   });

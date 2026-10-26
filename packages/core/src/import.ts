@@ -53,7 +53,8 @@ export function parseTextDeck<C extends Card>(game: GameDef<C>, text: string, ca
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.replace(/\/\/.*$/, '').trim();
     if (!line) continue;
-    const m = /^(\d+)\s*x?\s+(.+)$/i.exec(line);
+    // "3 Name" or "3x Name"; a separate "3 x Name" only when the name isn't a card ("X Antibody" is).
+    const m = /^(\d+)x?\s+(.+)$/i.exec(line);
     if (!m && /^[^0-9].*:?$/.test(line) && !byLabel.has(norm(line)) && !byName.get(norm(line))) {
       side = /sideboard/i.test(line); // a heading
       continue;
@@ -61,10 +62,13 @@ export function parseTextDeck<C extends Card>(game: GameDef<C>, text: string, ca
     const qty = m ? Number(m[1]) : 1;
     // Some lists add the set and number in brackets or parentheses; ignore them, unless they're part of the
     // name ("A Titan (Small)").
-    const full = norm(m ? m[2] : line);
-    const name = norm(full.replace(/\s*[[(][^\])]*[\])]\s*$/, ''));
-    const card =
-      taggedCard(raw, cards) ?? byLabel.get(full) ?? byName.get(full) ?? byLabel.get(name) ?? byLabel.get(name.replace(/ - /, ', ')) ?? byName.get(name) ?? null;
+    const find = (text: string) => {
+      const full = norm(text);
+      const name = norm(full.replace(/\s*[[(][^\])]*[\])]\s*$/, ''));
+      return byLabel.get(full) ?? byName.get(full) ?? byLabel.get(name) ?? byLabel.get(name.replace(/ - /, ', ')) ?? byName.get(name) ?? null;
+    };
+    const rest = m ? m[2] : line;
+    const card = taggedCard(raw, cards) ?? find(rest) ?? (/^x\s+/i.test(rest) ? find(rest.replace(/^x\s+/i, '')) : null);
     if (!card) {
       skipped.push(raw.trim());
       continue;

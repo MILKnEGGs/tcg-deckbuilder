@@ -172,6 +172,8 @@ export interface Imported {
   skipped: string[];
   /** The deck's description, when the list carries one. */
   description?: string;
+  /** The Considering list, when the list carries one (our own exports do). */
+  considering?: Entry[];
 }
 
 export interface GameDef<C extends Card> {
