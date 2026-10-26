@@ -82,6 +82,10 @@
   const sorted = $derived(sort !== defaultSort() || desc);
 
   const zoneName = $derived(onlyZone ? (format.zones.find((z) => z.id === onlyZone)?.name ?? onlyZone) : '');
+  const fitAuto = $derived(!!game.fit?.auto?.(deck, index));
+  $effect(() => {
+    fit = fitAuto;
+  });
   const activeCount = $derived(Object.values(sel).reduce((n, v) => n + v.length, 0) + (fit ? 1 : 0) + Object.values(toggled).filter(Boolean).length);
 
   // Cards the format doesn't allow (rotated out, suspended) are hidden unless asked for.
@@ -162,7 +166,7 @@
     sort = defaultSort();
     desc = false;
     sel = {};
-    fit = false;
+    fit = fitAuto;
     toggled = {};
     q = '';
     onlyZone = null;
@@ -222,7 +226,7 @@
     <button class="chip on" onclick={() => (onlyZone = null)}>Choosing: {zoneName} ✕</button>
   {/if}
   <span class="num">{results.length.toLocaleString()} cards</span>
-  {#if activeCount || q || onlyZone || sorted}<button class="ghost small" onclick={clearAll}>Clear</button>{/if}
+  {#if activeCount - (fit && fitAuto ? 1 : 0) || fit !== fitAuto || q || onlyZone || sorted}<button class="ghost small" onclick={clearAll}>Clear</button>{/if}
   {#if found.hidden || showIllegal}
     <button class="ghost small illegal-toggle" onclick={() => (showIllegal = !showIllegal)}>
       {showIllegal ? `Hide cards not legal in ${format.name}` : `+${found.hidden} not legal in ${format.name}`}

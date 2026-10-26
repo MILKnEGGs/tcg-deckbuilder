@@ -162,6 +162,8 @@ for (const c of source) {
     kind,
     typeText: c.type_text,
     supertypes: c.types.filter((t) => SUPERTYPES.has(t)),
+    // "Guardian / Warrior": either half suits the hero (Comprehensive Rules 1.1.3b).
+    hybrid: c.type_text.split(/ [-–] /)[0].includes(' / ') ? c.type_text.split(/ [-–] /)[0].split(' / ').map((s) => s.split(/\s+/).filter((w) => SUPERTYPES.has(w))) : undefined,
     generic: c.types.includes('Generic') || undefined,
     young: c.types.includes('Young') || undefined,
     subtypes: c.type_text.split(/ [-–] /)[1]?.split(/\s+/).filter(Boolean),

@@ -26,6 +26,8 @@ export interface FabCard extends Card {
   typeText: string;
   /** Classes and talents ("Warrior", "Light"). Generic cards have none. */
   supertypes: string[];
+  /** Hybrid cards ("Guardian / Warrior"): each half's supertypes; the hero needs to match one. */
+  hybrid?: string[][];
   generic?: true;
   young?: true;
   subtypes?: string[];
@@ -129,8 +131,12 @@ export const heroOf = (deck: Deck, cards: CardIndex<FabCard>) => rows(deck, card
 export function heroMiss(card: FabCard, hero: FabCard | undefined): string | null {
   if (!hero || card.kind === 'Hero') return null;
   const has = new Set([...hero.supertypes, ...(hero.essence ?? [])]);
-  const missing = card.supertypes.filter((t) => !has.has(t));
-  if (missing.length) return `Not ${missing.join(' ')}`;
+  if (card.hybrid) {
+    if (!card.hybrid.some((half) => half.every((t) => has.has(t)))) return `Not ${card.hybrid.map((half) => half.join(' ')).join(' or ')}`;
+  } else {
+    const missing = card.supertypes.filter((t) => !has.has(t));
+    if (missing.length) return `Not ${missing.join(' ')}`;
+  }
   if (card.specialization && !card.specialization.some((h) => hero.name === h || hero.name.startsWith(`${h} `) || hero.name.startsWith(`${h},`)))
     return `${card.specialization.join(' or ')} only`;
   return null;
@@ -319,6 +325,8 @@ export const game: GameDef<FabCard> = {
     label: 'Fits my hero',
     miss: (c, deck, cards) => heroMiss(c, heroOf(deck, cards)),
     test: (c, deck, cards) => !heroMiss(c, heroOf(deck, cards)),
+    // A hero's pool can only hold cards that suit it (Comprehensive Rules 1.1.3).
+    auto: (deck, cards) => !!heroOf(deck, cards),
   },
 
   goldfish: {

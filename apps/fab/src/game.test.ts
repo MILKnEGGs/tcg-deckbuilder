@@ -81,6 +81,14 @@ describe('fab hero fit', () => {
     expect(heroMiss(spec, boltyn)).toBe('Dorinthea only');
     expect(heroMiss(bolt, aurora)).toBeNull();
     expect(heroMiss(bolt, dori)).toBe('Not Lightning');
+    const hybrid = card('A Bit off the Side', { supertypes: ['Guardian', 'Warrior'], hybrid: [['Guardian'], ['Warrior']], generic: undefined });
+    expect(heroMiss(hybrid, dori)).toBeNull();
+    expect(heroMiss(hybrid, aurora)).toBe('Not Guardian or Warrior');
+  });
+
+  it('turns Fits my hero on once a hero is chosen', () => {
+    expect(game.fit!.auto!(deckOf([[snatchR, 3]]), cards)).toBe(false);
+    expect(game.fit!.auto!(deckOf([[dori, 1], [snatchR, 3]]), cards)).toBe(true);
   });
 });
 

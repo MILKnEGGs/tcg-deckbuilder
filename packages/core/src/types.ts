@@ -227,6 +227,11 @@ export interface GameDef<C extends Card> {
     /** Tag shown on considered cards that don't fit, e.g. "Aspect penalty +2". Null when it fits. */
     miss(card: C, deck: Deck, cards: CardIndex<C>): string | null;
     test(card: C, deck: Deck, cards: CardIndex<C>, format: FormatDef): boolean;
+    /**
+     * Turns the toggle on by itself while this is true, e.g. once a Flesh and Blood hero is chosen, since
+     * other cards can't go in that deck at all. It can still be switched off, and Clear turns it back on.
+     */
+    auto?(deck: Deck, cards: CardIndex<C>): boolean;
   };
   /** More search toggles like fit, e.g. UniVersus' "Same IP as my character". */
   toggles?: { id: string; label: string; test(card: C, deck: Deck, cards: CardIndex<C>): boolean }[];
