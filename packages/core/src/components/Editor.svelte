@@ -3,7 +3,7 @@
   // Deck: the deck alone, as card images, for reviewing and refining. Saves as you go.
   import { onMount } from 'svelte';
   import { deleteDeck, getDeck, putDeck } from '../db';
-  import { addCard, changeFormat, considerToDeck, consideringCount, deckToConsider, setConsidering, setQty } from '../deck';
+  import { addCard, changeFormat, rehome, considerToDeck, consideringCount, deckToConsider, setConsidering, setQty } from '../deck';
   import type { Card, CardData, CardIndex, Deck, GameDef } from '../types';
   import CardModal from './CardModal.svelte';
   import DeckPanel from './DeckPanel.svelte';
@@ -41,6 +41,11 @@
         // Make sure every zone of the format exists, even for decks saved by an older version.
         const f = game.formats.find((x) => x.id === d.format) ?? game.formats[0];
         for (const z of f.zones) d.zones[z.id] ??= [];
+        // Cards the game now files elsewhere move there (and the deck is saved).
+        if (rehome(game, d, index, f)) {
+          d.updated = Date.now();
+          void putDeck(d);
+        }
         // Decks under way open on the deck itself, for refining: once leaders/bases are chosen,
         // or, in games without them, once there are any cards.
         const command = f.zones.filter((z) => z.command);

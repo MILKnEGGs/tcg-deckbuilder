@@ -29,6 +29,8 @@ const SUPERTYPES = new Set([
 /** Not part of a card pool. */
 const SKIP_TYPES = new Set(['Token', 'Demi-Hero', 'Macro', 'Placeholder Card']);
 const CARD_TYPES = ['Hero', 'Weapon', 'Equipment', 'Action', 'Attack Reaction', 'Defense Reaction', 'Instant', 'Block', 'Resource', 'Mentor', 'Ally', 'Event'];
+/** A card with any of these types starts in the deck, even if it's also equipment (Evos): rule 1.3.2c. */
+const DECK_TYPES = ['Action', 'Attack Reaction', 'Block', 'Defense Reaction', 'Instant', 'Mentor', 'Resource'];
 const RARITY = { B: 'Basic', T: 'Token', C: 'Common', R: 'Rare', S: 'Super Rare', M: 'Majestic', L: 'Legendary', F: 'Fabled', P: 'Promo', V: 'Marvel' };
 const RARITY_ORDER = 'BCRSMLFPVT';
 
@@ -186,6 +188,7 @@ for (const c of source) {
     pitch: num(c.pitch) ?? undefined,
     color: c.color || undefined,
     kind,
+    deckCard: (kind === 'Equipment' || kind === 'Weapon') && DECK_TYPES.some((t) => c.types.includes(t)) ? true : undefined,
     typeText: c.type_text,
     supertypes: c.types.filter((t) => SUPERTYPES.has(t)),
     // "Guardian / Warrior": either half suits the hero (Comprehensive Rules 1.1.3b).

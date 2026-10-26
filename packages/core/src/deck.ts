@@ -205,3 +205,28 @@ export function massEntry<C extends Card>(game: GameDef<C>, deck: Deck, cards: C
 export function deckOrder<C extends Card>(game: GameDef<C>): (a: C, b: C) => number {
   return game.deckOrder ?? ((a, b) => (game.cost(a) ?? 0) - (game.cost(b) ?? 0) || game.label(a).localeCompare(game.label(b)));
 }
+
+/**
+ * Moves cards the game now files in a different zone (after a card-data fix, e.g. Flesh and Blood Evos going
+ * from equipment to the deck) to where they belong. Sideboards are left alone. Returns how many moved.
+ */
+export function rehome<C extends Card>(game: GameDef<C>, deck: Deck, cards: CardIndex<C>, format: FormatDef): number {
+  let moved = 0;
+  for (const z of format.zones) {
+    if (z.id === 'side') continue;
+    for (const e of [...(deck.zones[z.id] ?? [])]) {
+      const c = cards.get(e.id);
+      const home = c ? game.zoneFor(c, format) : null;
+      if (!home || home === z.id || !format.zones.some((x) => x.id === home)) continue;
+      deck.zones[z.id] = deck.zones[z.id].filter((x) => x !== e);
+      const dest = zoneEntries(deck, home);
+      const d = dest.find((x) => x.id === e.id);
+      if (d) {
+        d.qty += e.qty;
+        d.owned += e.owned;
+      } else dest.push({ ...e });
+      moved++;
+    }
+  }
+  return moved;
+}

@@ -24,6 +24,8 @@ export interface FabCard extends Card {
   color?: 'Red' | 'Yellow' | 'Blue' | string;
   /** Hero, Weapon, Equipment, Action, Instant, Attack Reaction, Defense Reaction, Block, … */
   kind: string;
+  /** Equipment that's also an Action or Instant (Evos): it goes in the deck, not with the arena cards. */
+  deckCard?: true;
   typeText: string;
   /** Classes and talents ("Warrior", "Light"). Generic cards have none. */
   supertypes: string[];
@@ -188,7 +190,7 @@ function validate(deck: Deck, cards: CardIndex<FabCard>, format: FormatDef): Iss
 
 const COLOR_WORD: Record<string, string> = { Red: 'red', Yellow: 'yellow', Blue: 'blue' };
 const label = (c: FabCard) => (c.color && COLOR_WORD[c.color] ? `${c.name} (${COLOR_WORD[c.color]})` : c.name);
-const isArena = (c: FabCard) => c.kind === 'Weapon' || c.kind === 'Equipment';
+const isArena = (c: FabCard) => (c.kind === 'Weapon' || c.kind === 'Equipment') && !c.deckCard;
 const norm = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').trim();
 
 function exportDeck(deck: Deck, cards: CardIndex<FabCard>): string {
@@ -265,7 +267,7 @@ const PITCH_STYLE: Record<number, { text: string; color: string; name: string }>
   3: { text: '3', color: '#3b82f6', name: 'Blue' },
 };
 const group = (c: FabCard) =>
-  c.kind === 'Action' ? (c.subtypes?.includes('Attack') ? 'Attack actions' : 'Non-attack actions') : c.kind === 'Weapon' ? 'Weapons' : c.kind === 'Equipment' ? 'Equipment' : c.kind === 'Hero' ? 'Hero' : c.kind === 'Ally' ? 'Allies' : `${c.kind}s`;
+  c.deckCard ? (c.subtypes?.some((s) => s.startsWith('Evo')) ? 'Evos' : 'Deck equipment') : c.kind === 'Action' ? (c.subtypes?.includes('Attack') ? 'Attack actions' : 'Non-attack actions') : c.kind === 'Weapon' ? 'Weapons' : c.kind === 'Equipment' ? 'Equipment' : c.kind === 'Hero' ? 'Hero' : c.kind === 'Ally' ? 'Allies' : `${c.kind}s`;
 const numOrNull = (v: number | string | undefined) => (typeof v === 'number' ? v : null);
 
 export const game: GameDef<FabCard> = {
@@ -281,7 +283,7 @@ export const game: GameDef<FabCard> = {
   label,
   setCode: (c) => c.priceSet ?? c.set,
   group,
-  groups: ['Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'],
+  groups: ['Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Evos', 'Deck equipment', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'],
   cost: (c) => (isArena(c) || c.kind === 'Hero' ? null : numOrNull(c.cost)),
   // Within each group: red, yellow, blue (colourless first), then name.
   deckOrder: (a, b) => (a.pitch ?? 0) - (b.pitch ?? 0) || a.name.localeCompare(b.name),
@@ -319,7 +321,7 @@ export const game: GameDef<FabCard> = {
   searchText: (c) =>
     [c.name, c.color, c.typeText, ...(c.keywords ?? []), c.text, ...c.sets].filter(Boolean).join(' ').toLowerCase(),
   filters: [
-    { id: 'kind', label: 'Type', values: (c) => [group(c)], options: ['Hero', 'Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'] },
+    { id: 'kind', label: 'Type', values: (c) => [group(c)], options: ['Hero', 'Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Evos', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'] },
     { id: 'pitch', label: 'Pitch', values: (c) => (c.pitch ? [`${c.pitch} ${PITCH_STYLE[c.pitch]?.name ?? ''}`.trim()] : []), options: ['1 Red', '2 Yellow', '3 Blue'] },
     { id: 'class', label: 'Class', values: (c) => (c.supertypes.length ? c.supertypes : ['Generic']) },
     { id: 'cost', label: 'Cost', values: (c) => (c.cost != null ? [String(c.cost)] : []) },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCard, indexCards, newDeck, setQty } from '@milk/core/deck';
+import { addCard, indexCards, newDeck, rehome, setQty } from '@milk/core/deck';
 import { start } from '@milk/core/goldfish';
 import { formats, game, heroMiss, illegal, maxCopies, type FabCard } from './game';
 
@@ -106,6 +106,19 @@ describe('fab validation', () => {
     }
     expect(messages(pool)).toContainEqual(expect.stringMatching(/Card pool is 82 cards/));
     expect(game.meters!(pool, cards, cc)[0]).toEqual({ label: 'card pool', value: 82, max: 80 });
+  });
+});
+
+describe('fab evos', () => {
+  it('puts Action and Instant equipment in the deck, and moves them there in older decks', () => {
+    const evo = card('Evo Zip Line', { kind: 'Equipment', deckCard: true, pitch: 2, color: 'Yellow', subtypes: ['Evo', 'Legs'], supertypes: ['Mechanologist'], generic: undefined });
+    cards.set(evo.id, evo);
+    expect(game.zoneFor(evo, cc)).toBe('main');
+    expect(game.zoneFor(legendary, cc)).toBe('arena');
+    const old = deckOf([[snatchR, 3], [evo, 1, 'arena'], [legendary, 1]]);
+    expect(rehome(game, old, cards, cc)).toBe(1);
+    expect(old.zones.arena.map((e) => e.id)).toEqual([legendary.id]);
+    expect(old.zones.main.map((e) => e.id)).toEqual([snatchR.id, evo.id]);
   });
 });
 
