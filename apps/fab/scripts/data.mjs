@@ -157,9 +157,35 @@ function status(c, f) {
   return undefined;
 }
 
+// Double-faced cards (Singularity / Teklovossen, the Mechropotent; Figments / Archangels): the back face,
+// keyed by the front card, from the repo's face pairs (which name printings).
+const backs = new Map();
+/** Printings that are the back of a double-faced card: a card only ever printed that way isn't added on its own. */
+const backPrintings = new Set();
+try {
+  const byPrinting = new Map(source.flatMap((c) => c.printings.map((p) => [p.unique_id, { c, p }])));
+  for (const f of await getJson(raw('develop', 'card-face-association.json'))) {
+    const front = byPrinting.get(f.front_unique_id);
+    const back = byPrinting.get(f.back_unique_id);
+    if (!f.is_DFC || !front || !back) continue;
+    backPrintings.add(f.back_unique_id);
+    if (backs.has(front.c.unique_id)) continue;
+    backs.set(front.c.unique_id, {
+      name: back.c.name,
+      typeText: back.c.type_text,
+      text: back.c.functional_text_plain?.replace(/\r/g, '').trim() || undefined,
+      img: back.p.image_url || back.c.printings.find((p) => p.image_url)?.image_url,
+    });
+  }
+} catch (err) {
+  console.warn(`  no double-faced card pairs: ${err.message}`);
+}
+console.log(`the-fab-cube: ${backs.size} double-faced cards`);
+
 const cards = [];
 for (const c of source) {
   if (!c.printings.length || c.types.some((t) => SKIP_TYPES.has(t))) continue;
+  if (c.printings.every((p) => backPrintings.has(p.unique_id))) continue; // e.g. Suraya, on the back of a Figment
   const bad = {
     cc: status(c, 'cc'),
     blitz: status(c, 'blitz'),
@@ -213,6 +239,7 @@ for (const c of source) {
     bad: Object.fromEntries(Object.entries(bad).filter(([, v]) => v)),
     restricted: c.ll_restricted ? ['ll'] : undefined,
     img: pic?.image_url,
+    back: backs.get(c.unique_id),
     price: cheapest ? priceOf(cheapest) : null,
     priceSet: cheapest?.set_id,
     tcg: cheapest ? Number(cheapest.tcgplayer_product_id) : pool.find((p) => p.tcgplayer_product_id) ? Number(pool.find((p) => p.tcgplayer_product_id).tcgplayer_product_id) : undefined,

@@ -57,6 +57,8 @@ export interface FabCard extends Card {
   /** Formats where the card is restricted to 1 copy. */
   restricted?: FormatId[];
   img?: string;
+  /** The other face of a double-faced card (Singularity flips to Teklovossen, the Mechropotent). */
+  back?: { name: string; typeText: string; text?: string; img?: string };
 }
 
 interface FabFormat extends FormatDef {
@@ -287,7 +289,7 @@ export const game: GameDef<FabCard> = {
   cost: (c) => (isArena(c) || c.kind === 'Hero' ? null : numOrNull(c.cost)),
   // Within each group: red, yellow, blue (colourless first), then name.
   deckOrder: (a, b) => (a.pitch ?? 0) - (b.pitch ?? 0) || a.name.localeCompare(b.name),
-  image: (c) => ({ src: c.img ?? '' }),
+  image: (c) => ({ src: c.img ?? '', back: c.back?.img }),
   meters: (deck, cards, format) => [
     { label: 'card pool', value: rows(deck, cards).filter((x) => x.z !== 'hero').reduce((n, x) => n + x.e.qty, 0), max: fmt(format).pool },
   ],
@@ -314,12 +316,13 @@ export const game: GameDef<FabCard> = {
     rows.push(['Sets', c.sets.join(', ')]);
     const legal = formats.map((f) => `${f.name}: ${c.bad[f.id] ?? (c.restricted?.includes(f.id) ? 'restricted (1)' : 'legal')}`);
     rows.push(['Legality', legal.join(' · ')]);
+    if (c.back) rows.push(['Other side', `${c.back.name} (${c.back.typeText})`]);
     rows.push(['Price', money(c.price)]);
     return rows;
   },
-  text: (c) => (c.text ? c.text.split('\n') : []),
+  text: (c) => [...(c.text ? c.text.split('\n') : []), ...(c.back?.text ? [`Other side (${c.back.name}): ${c.back.text}`] : [])],
   searchText: (c) =>
-    [c.name, c.color, c.typeText, ...(c.keywords ?? []), c.text, ...c.sets].filter(Boolean).join(' ').toLowerCase(),
+    [c.name, c.color, c.typeText, ...(c.keywords ?? []), c.text, ...c.sets, c.back?.name, c.back?.typeText, c.back?.text].filter(Boolean).join(' ').toLowerCase(),
   filters: [
     { id: 'kind', label: 'Type', values: (c) => [group(c)], options: ['Hero', 'Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Evos', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'] },
     { id: 'pitch', label: 'Pitch', values: (c) => (c.pitch ? [`${c.pitch} ${PITCH_STYLE[c.pitch]?.name ?? ''}`.trim()] : []), options: ['1 Red', '2 Yellow', '3 Blue'] },
