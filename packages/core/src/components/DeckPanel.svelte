@@ -137,6 +137,7 @@
               >
                 {e.owned >= e.qty ? '✓' : ''}{e.qty > 1 ? `${e.owned}/${e.qty}` : e.owned ? '' : 'Own?'}
               </button>
+              {#if game.setCode}{@const set = c ? game.setCode(c) : null}<span class="set small" title={set ?? ''}>{set ?? ''}</span>{/if}
               <span class="price num small">{c?.price == null && c && game.priceNote?.(c) ? game.priceNote(c) : money(c?.price != null ? c.price * e.qty : null)}</span>
             </li>
           {/each}
@@ -242,6 +243,7 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    container-type: inline-size;
   }
   .rows li {
     display: flex;
@@ -339,6 +341,21 @@
   .owned.all {
     color: var(--ok);
     border-color: var(--ok);
+  }
+  /* The set column only where the list is wide (desktop Deck view), not in the Build sidebar or on phones. */
+  .set {
+    display: none;
+    flex: none;
+    width: 84px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @container (min-width: 560px) {
+    .set {
+      display: block;
+    }
   }
   .price {
     flex: none;

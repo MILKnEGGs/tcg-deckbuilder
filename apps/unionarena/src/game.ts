@@ -163,6 +163,7 @@ export const game: GameDef<UaCard> = {
   validate,
 
   label,
+  setCode: (c) => c.id.split('-').slice(0, 2).join('-'),
   group: (c) => (c.type === 'Character' ? 'Characters' : `${c.type}s`),
   groups: ['Characters', 'Events', 'Sites'],
   // Energy needed is what shapes a Union Arena curve (almost everything costs 1 AP).

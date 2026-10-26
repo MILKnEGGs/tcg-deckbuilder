@@ -327,6 +327,7 @@ export const game: GameDef<UvsCard> = {
   validate,
 
   label: (c) => c.name,
+  setCode: (c) => c.set.replace(/^UniVersus:s*/, ''),
   group: (c) => PLURAL[c.type] ?? `${c.type}s`,
   groups: ['Characters', 'Attacks', 'Foundations', 'Actions', 'Assets', 'Backups', 'Arenas'],
   cost: (c) => (c.type === 'Character' ? null : c.difficulty),

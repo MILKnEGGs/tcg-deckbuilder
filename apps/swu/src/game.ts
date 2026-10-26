@@ -273,6 +273,7 @@ export const game: GameDef<SwuCard> = {
   validate,
 
   label,
+  setCode: (c) => c.set,
   group: (c) => (c.type === 'Leader' ? 'Leaders' : c.type === 'Base' ? 'Bases' : c.type === 'Unit' ? unitGroup(c) : `${c.type}s`),
   groups: ['Leaders', 'Bases', 'Ground units', 'Space units', 'Events', 'Upgrades'],
   cost: (c) => (isDeckCard(c) ? c.cost : null),

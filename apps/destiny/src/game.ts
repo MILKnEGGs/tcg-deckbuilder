@@ -350,6 +350,7 @@ export const game: GameDef<SwdCard> = {
   validate,
 
   label,
+  setCode: (c) => c.set,
   group: (c) => PLURAL[c.type] ?? cap(c.type),
   groups: ['Characters', 'Plots', 'Battlefields', 'Upgrades', 'Supports', 'Events', 'Downgrades'],
   cost: (c) => c.cost,

@@ -180,6 +180,7 @@ export const game: GameDef<DigiCard> = {
   validate,
 
   label,
+  setCode: (c) => c.set,
   group,
   groups: ['Digi-Eggs', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Level 6', 'Level 7', 'Tamers', 'Options'],
   cost: (c) => (c.type === 'Digi-Egg' ? null : c.playCost),

@@ -48,6 +48,8 @@ export interface FabCard extends Card {
   rarity?: string;
   set: string;
   sets: string[];
+  /** The set of the printing the price is for. */
+  priceSet?: string;
   /** Why the card can't be played in a format; formats it's fine in are absent. */
   bad: Partial<Record<FormatId, string>>;
   /** Formats where the card is restricted to 1 copy. */
@@ -277,6 +279,7 @@ export const game: GameDef<FabCard> = {
   validate,
 
   label,
+  setCode: (c) => c.priceSet ?? c.set,
   group,
   groups: ['Weapons', 'Equipment', 'Attack actions', 'Non-attack actions', 'Attack Reactions', 'Defense Reactions', 'Instants', 'Blocks', 'Allies', 'Mentors', 'Resources'],
   cost: (c) => (isArena(c) || c.kind === 'Hero' ? null : numOrNull(c.cost)),

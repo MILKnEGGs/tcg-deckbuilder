@@ -134,6 +134,7 @@ export const game: GameDef<LorCard> = {
   validate,
 
   label,
+  setCode: (c) => `Set ${c.set}`,
   group: (c) => `${c.type}s`,
   groups: ['Characters', 'Actions', 'Songs', 'Items', 'Locations'],
   cost: (c) => c.cost,

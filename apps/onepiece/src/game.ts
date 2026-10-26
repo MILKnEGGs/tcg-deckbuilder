@@ -190,6 +190,7 @@ export const game: GameDef<OpCard> = {
   validate,
 
   label,
+  setCode: (c) => c.set,
   group: (c) => (c.type === 'Leader' ? 'Leader' : c.type === 'Character' ? 'Characters' : `${c.type}s`),
   groups: ['Leader', 'Characters', 'Events', 'Stages'],
   cost: (c) => (c.type === 'Leader' ? null : c.cost),

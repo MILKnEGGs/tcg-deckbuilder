@@ -211,6 +211,7 @@ for (const c of source) {
     restricted: c.ll_restricted ? ['ll'] : undefined,
     img: pic?.image_url,
     price: cheapest ? priceOf(cheapest) : null,
+    priceSet: cheapest?.set_id,
     tcg: cheapest ? Number(cheapest.tcgplayer_product_id) : pool.find((p) => p.tcgplayer_product_id) ? Number(pool.find((p) => p.tcgplayer_product_id).tcgplayer_product_id) : undefined,
   });
 }

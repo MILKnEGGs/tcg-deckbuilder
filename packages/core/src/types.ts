@@ -211,6 +211,8 @@ export interface GameDef<C extends Card> {
   meters?(deck: Deck, cards: CardIndex<C>, format: FormatDef): { label: string; value: number; max: number }[];
   /** Shown instead of a price when a card has none for a known reason ("Print & play"). */
   priceNote?(card: C): string | null;
+  /** Short set code shown beside the price in wide deck lists ("IAR"); the printing priced, where known. */
+  setCode?(card: C): string | null;
   /** Label/value rows for the card detail view. */
   details(card: C): [string, string][];
   /** Rules text paragraphs for the card detail view. */
