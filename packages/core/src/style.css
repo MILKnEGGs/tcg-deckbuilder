@@ -83,6 +83,15 @@ button.danger {
   color: var(--error);
 }
 
+/* Phones zoom into any field under 16px when you tap it (and often stay zoomed), so fields get 16px there. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 input[type='text'],
 input[type='search'],
 select,

@@ -35,6 +35,9 @@
   const PAGE = 90;
 
   let q = $state('');
+  // What the results use: follows the box after a short pause, so typing stays smooth on phones.
+  let term = $state('');
+  let box = $state<HTMLInputElement>();
   let sel = $state<Record<string, (string | number)[]>>({});
   let fit = $state(false);
   let toggled = $state<Record<string, boolean>>({});
@@ -85,7 +88,7 @@
   const illegalIds = $derived(game.illegal ? new Set(data.cards.filter((c) => game.illegal!(c, format)).map((c) => c.id)) : new Set<string>());
   type P = (typeof prepared)[number];
   const found = $derived.by(() => {
-    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    const words = term.toLowerCase().split(/\s+/).filter(Boolean);
     const active = Object.entries(sel).filter(([, v]) => v.length);
     // Plain browsing shows deck cards only; leaders and bases come up when you search or filter,
     // or pick an empty slot in the deck.
@@ -129,9 +132,26 @@
 
   // New search or filters start back at the first page.
   $effect(() => {
-    void [q, sel, fit, toggled, sort, desc, onlyZone, showIllegal];
+    void [term, sel, fit, toggled, sort, desc, onlyZone, showIllegal];
     limit = PAGE;
   });
+  $effect(() => {
+    const next = q;
+    if (!next) {
+      term = '';
+      return;
+    }
+    const t = setTimeout(() => (term = next), 150);
+    return () => clearTimeout(t);
+  });
+
+  /** The × in the search box: empty it and keep typing. */
+  function clearSearch() {
+    q = '';
+    term = '';
+    term = '';
+    box?.focus();
+  }
 
   function toggle(id: string, v: string | number) {
     const cur = sel[id] ?? [];
@@ -154,7 +174,19 @@
     <button class:on={target === 'deck'} onclick={() => (target = 'deck')}>Deck</button>
     <button class:on={target === 'considering'} class="maybe" onclick={() => (target = 'considering')}>Considering</button>
   </div>
-  <input type="search" placeholder="Search name, text, traits…" bind:value={q} aria-label="Search cards" />
+  <span class="searchbox">
+    <input
+      type="search"
+      placeholder="Search name, text, traits…"
+      bind:value={q}
+      bind:this={box}
+      onkeydown={(e) => e.key === 'Escape' && q && clearSearch()}
+      enterkeyhint="search"
+      autocomplete="off"
+      aria-label="Search cards"
+    />
+    {#if q}<button class="clear-q" onclick={clearSearch} aria-label="Clear search" title="Clear search">×</button>{/if}
+  </span>
   <select bind:value={sort} aria-label="Sort by" title="Sort by">
     {#each sorts as o (o.id)}<option value={o.id}>{o.id === 'name' ? 'Name' : `By ${o.label.toLowerCase()}`}</option>{/each}
   </select>
@@ -250,9 +282,39 @@
     padding: 12px 16px 8px;
     background: var(--bg);
   }
-  .bar input {
+  .searchbox {
+    position: relative;
+    display: flex;
     flex: 1;
     min-width: 0;
+  }
+  .searchbox input {
+    flex: 1;
+    min-width: 0;
+    padding-right: 34px;
+  }
+  /* Our own × instead of the browser's, which phones don't show. */
+  .searchbox input::-webkit-search-cancel-button {
+    appearance: none;
+  }
+  .clear-q {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+  .clear-q:hover {
+    color: var(--text);
+    background: var(--panel-2);
   }
   .bar select {
     max-width: 9.5em;
@@ -471,7 +533,7 @@
       flex-wrap: wrap;
     }
     /* Phones: search and Filters on top; Deck/Considering and the sort below. */
-    .bar input {
+    .searchbox {
       order: -2;
       flex: 1 1 60%;
     }

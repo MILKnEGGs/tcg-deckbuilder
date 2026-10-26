@@ -3,15 +3,22 @@
 // github.com/the-fab-cube/flesh-and-blood-cards; prices from TCGCSV (TCGplayer) by that id.
 // Run with "npm run data"; the deploy workflow runs it daily.
 //
+// New sets are added on a branch of that repo (named after the set) and merged weeks after release, so
+// this also reads every other branch: cards and printings it adds are kept once their set is out, and
+// previews of unreleased sets are left out. Where a card is on both, develop's text (errata) wins.
+//
 // A card is its name plus pitch color ("Snatch" red), which is what the copy limit counts, so reprints,
 // foils and alt arts are the same card. Its price is the cheapest non-foil standard-art printing.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const SOURCE = 'https://raw.githubusercontent.com/the-fab-cube/flesh-and-blood-cards/develop/json/english/card.json';
+const REPO = 'the-fab-cube/flesh-and-blood-cards';
+const raw = (branch, file) => `https://raw.githubusercontent.com/${REPO}/${encodeURIComponent(branch)}/json/english/${file}`;
 const TCG_CATEGORY = 62; // TCGCSV / TCGplayer category for Flesh and Blood
 const OUT = new URL('../public/data/cards.json', import.meta.url);
 const HEADERS = { 'User-Agent': 'milks-deckbuilder/0.1 (+https://github.com/MILKnEGGs/tcg-deckbuilder)' };
+// The deploy workflow passes its token so listing branches isn't rate-limited.
+const GITHUB_HEADERS = { ...HEADERS, ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}) };
 
 /** Classes and talents: a card can only go with a hero that has all of the card's. */
 const SUPERTYPES = new Set([
@@ -25,10 +32,10 @@ const CARD_TYPES = ['Hero', 'Weapon', 'Equipment', 'Action', 'Attack Reaction', 
 const RARITY = { B: 'Basic', T: 'Token', C: 'Common', R: 'Rare', S: 'Super Rare', M: 'Majestic', L: 'Legendary', F: 'Fabled', P: 'Promo', V: 'Marvel' };
 const RARITY_ORDER = 'BCRSMLFPVT';
 
-async function getJson(url) {
+async function getJson(url, headers = HEADERS) {
   for (let attempt = 1; ; attempt++) {
     try {
-      const res = await fetch(url, { headers: HEADERS });
+      const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       return await res.json();
     } catch (err) {
@@ -40,8 +47,60 @@ async function getJson(url) {
 
 // ---------------------------------------------------------------------------------------------
 
-const source = await getJson(SOURCE);
-console.log(`the-fab-cube: ${source.length} cards`);
+const source = await getJson(raw('develop', 'card.json'));
+console.log(`the-fab-cube: ${source.length} cards on develop`);
+
+// Release dates by set, from every branch's set list. A set only known from a branch counts as out once
+// its date has passed; one without a date is a preview.
+let branches = [];
+try {
+  branches = (await getJson(`https://api.github.com/repos/${REPO}/branches?per_page=100`, GITHUB_HEADERS)).map((b) => b.name).filter((b) => b !== 'develop' && b !== 'main');
+} catch (err) {
+  console.warn(`  couldn't list branches, using develop only: ${err.message}`);
+}
+const released = new Map(); // set id -> earliest release date ('' when unknown)
+const addSets = (list, fromDevelop) => {
+  for (const s of list) {
+    const date = (s.printings ?? []).map((p) => p.initial_release_date).filter(Boolean).sort()[0] ?? '';
+    if (!released.has(s.id) || (date && date < released.get(s.id))) released.set(s.id, fromDevelop && !date ? '0' : date);
+  }
+};
+addSets(await getJson(raw('develop', 'set.json')), true);
+const today = new Date().toISOString();
+const isOut = (setId) => {
+  const d = released.get(setId);
+  return d != null && d !== '' && d <= today;
+};
+
+const byId = new Map(source.map((c) => [c.unique_id, c]));
+for (const branch of branches) {
+  try {
+    addSets(await getJson(raw(branch, 'set.json')), false);
+    let cards = 0;
+    let prints = 0;
+    for (const c of await getJson(raw(branch, 'card.json'))) {
+      const fresh = c.printings.filter((p) => isOut(p.set_id));
+      const known = byId.get(c.unique_id);
+      if (!known) {
+        if (fresh.length) {
+          byId.set(c.unique_id, { ...c, printings: fresh });
+          source.push(byId.get(c.unique_id));
+          cards++;
+        }
+        continue;
+      }
+      const have = new Set(known.printings.map((p) => p.unique_id));
+      const extra = fresh.filter((p) => !have.has(p.unique_id));
+      known.printings.push(...extra);
+      prints += extra.length;
+    }
+    console.log(`  branch ${branch}: ${cards} released cards and ${prints} printings not on develop yet`);
+  } catch (err) {
+    console.warn(`  skipped branch ${branch}: ${err.message}`);
+  }
+}
+// Develop also lists products a few weeks before they come out; leave those printings out until then.
+for (const c of source) c.printings = c.printings.filter((p) => !(released.get(p.set_id) > today));
 
 // TCGplayer market prices by product id, non-foil first.
 const prices = new Map();
@@ -72,7 +131,7 @@ function status(c, f) {
 
 const cards = [];
 for (const c of source) {
-  if (c.types.some((t) => SKIP_TYPES.has(t))) continue;
+  if (!c.printings.length || c.types.some((t) => SKIP_TYPES.has(t))) continue;
   const bad = {
     cc: status(c, 'cc'),
     blitz: status(c, 'blitz'),

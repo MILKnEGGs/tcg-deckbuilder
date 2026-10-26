@@ -41,6 +41,8 @@ jobs:
           key: uvsultra-${{ steps.week.outputs.week }}
           restore-keys: uvsultra-
       - run: npm run data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
