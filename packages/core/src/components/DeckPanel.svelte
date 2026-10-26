@@ -100,6 +100,52 @@
   {/each}
 </div>
 
+{#snippet row(zone: string, e: Entry, c: C | undefined)}
+  <li class:flag-error={flagged.get(e.id) === 'error'} class:flag-warning={flagged.get(e.id) === 'warning'}>
+    <span class="qty">
+      <button class="step" onclick={() => (c ? onRemove(c, zone) : drop(zone, e.id))} aria-label="Remove one">−</button>
+      <span class="num">{e.qty}</span>
+      <button class="step" onclick={() => c && onAdd(c, zone)} disabled={!c} aria-label="Add one">+</button>
+    </span>
+    <button class="cname" onclick={() => c && onOpen(c)}>
+      {#if c && game.cost(c) != null}<span class="cost num">{game.cost(c)}</span>{/if}
+      <span class="namebox">
+        <span class="label">{c ? game.label(c) : e.id}</span>
+        {#if c && game.badges}<Badges badges={game.badges(c)} size="mini" />{/if}
+      </span>
+    </button>
+    <button class="demote" onclick={() => c && onDemote(c, zone)} disabled={!c} title="Move one copy to Considering (a possible cut)" aria-label="Move one to Considering">?</button>
+    <button
+      class="owned num"
+      class:all={e.owned >= e.qty}
+      class:some={e.owned > 0 && e.owned < e.qty}
+      onclick={() => owned(zone, e)}
+      title="Tap to mark the copies you own"
+    >
+      {e.owned >= e.qty ? '✓' : ''}{e.qty > 1 ? `${e.owned}/${e.qty}` : e.owned ? '' : 'Own?'}
+    </button>
+    {#if game.setCode}{@const set = c ? game.setCode(c) : null}<span class="set small" title={set ?? ''}>{set ?? ''}</span>{/if}
+    <span class="price num small">{c?.price == null && c && game.priceNote?.(c) ? game.priceNote(c) : money(c?.price != null ? c.price * e.qty : null)}</span>
+  </li>
+{/snippet}
+
+<!-- Heroes, leaders and bases as rows too, for their price and the Own toggle. -->
+{#if commandZones.some((z) => deck.zones[z.id]?.length)}
+  <section class="zone lead-rows">
+    {#each commandZones as z (z.id)}
+      {@const list = (deck.zones[z.id] ?? []).map((e) => ({ e, c: index.get(e.id) }))}
+      {#if list.length}
+        <h4>{z.name} <span class="num">{zoneCount(deck, z.id)}</span></h4>
+        <ul class="rows">
+          {#each list as { e, c } (e.id)}
+            {@render row(z.id, e, c)}
+          {/each}
+        </ul>
+      {/if}
+    {/each}
+  </section>
+{/if}
+
 <Considering {game} {index} {deck} {changed} {onConsider} {onPromote} {onOpen} />
 
 {#each listZones as z (z.id)}
@@ -114,32 +160,7 @@
         <h4>{g} <span class="num">{rows.reduce((n, r) => n + r.e.qty, 0)}</span></h4>
         <ul class="rows">
           {#each rows as { e, c } (e.id)}
-            <li class:flag-error={flagged.get(e.id) === 'error'} class:flag-warning={flagged.get(e.id) === 'warning'}>
-              <span class="qty">
-                <button class="step" onclick={() => (c ? onRemove(c, z.id) : drop(z.id, e.id))} aria-label="Remove one">−</button>
-                <span class="num">{e.qty}</span>
-                <button class="step" onclick={() => c && onAdd(c, z.id)} disabled={!c} aria-label="Add one">+</button>
-              </span>
-              <button class="cname" onclick={() => c && onOpen(c)}>
-                {#if c && game.cost(c) != null}<span class="cost num">{game.cost(c)}</span>{/if}
-                <span class="namebox">
-                  <span class="label">{c ? game.label(c) : e.id}</span>
-                  {#if c && game.badges}<Badges badges={game.badges(c)} size="mini" />{/if}
-                </span>
-              </button>
-              <button class="demote" onclick={() => c && onDemote(c, z.id)} disabled={!c} title="Move one copy to Considering (a possible cut)" aria-label="Move one to Considering">?</button>
-              <button
-                class="owned num"
-                class:all={e.owned >= e.qty}
-                class:some={e.owned > 0 && e.owned < e.qty}
-                onclick={() => owned(z.id, e)}
-                title="Tap to mark the copies you own"
-              >
-                {e.owned >= e.qty ? '✓' : ''}{e.qty > 1 ? `${e.owned}/${e.qty}` : e.owned ? '' : 'Own?'}
-              </button>
-              {#if game.setCode}{@const set = c ? game.setCode(c) : null}<span class="set small" title={set ?? ''}>{set ?? ''}</span>{/if}
-              <span class="price num small">{c?.price == null && c && game.priceNote?.(c) ? game.priceNote(c) : money(c?.price != null ? c.price * e.qty : null)}</span>
-            </li>
+            {@render row(z.id, e, c)}
           {/each}
         </ul>
       {/each}
