@@ -104,7 +104,33 @@ for (const c of source) c.printings = c.printings.filter((p) => !(released.get(p
 
 // TCGplayer market prices by product id, non-foil first.
 const prices = new Map();
-for (const g of (await getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/groups`)).results) {
+const groups = (await getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/groups`)).results;
+// New sets often reach the card data before their TCGplayer ids do (Armory Deck: Malice did). For those
+// printings, find the product in that set's TCGplayer listing by card number ("AMA005").
+const missing = new Set(source.flatMap((c) => c.printings.filter((p) => !p.tcgplayer_product_id).map((p) => p.set_id)));
+const filled = new Map(); // set id -> printings matched
+const simple = (s) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+const sameName = (product, card) => !!product && simple(product).startsWith(simple(card));
+for (const g of groups.filter((g) => g.abbreviation && missing.has(g.abbreviation))) {
+  try {
+    const byNumber = new Map();
+    for (const p of (await getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/${g.groupId}/products`)).results) {
+      const number = p.extendedData?.find((e) => e.name === 'Number')?.value;
+      if (number && !byNumber.has(number)) byNumber.set(number, p);
+    }
+    for (const c of source)
+      for (const p of c.printings)
+        // Only when the product really is this card (its name starts with the card name).
+        if (p.set_id === g.abbreviation && !p.tcgplayer_product_id && sameName(byNumber.get(p.id)?.name, c.name)) {
+          p.tcgplayer_product_id = String(byNumber.get(p.id).productId);
+          filled.set(g.abbreviation, (filled.get(g.abbreviation) ?? 0) + 1);
+        }
+  } catch (err) {
+    console.warn(`  no products for ${g.name}: ${err.message}`);
+  }
+}
+if (filled.size) console.log(`TCGCSV: matched printings without a TCGplayer id by card number: ${[...filled].map(([s, n]) => `${s} ${n}`).join(", ")}`);
+for (const g of groups) {
   try {
     for (const p of (await getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/${g.groupId}/prices`)).results) {
       const v = p.marketPrice ?? p.midPrice ?? p.lowPrice;
