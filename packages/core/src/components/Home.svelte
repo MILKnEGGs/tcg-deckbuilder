@@ -101,7 +101,8 @@
 </script>
 
 <header>
-  <div>
+  <div class="title">
+    <p class="back small"><a href="../">← All games</a></p>
     <h1>{game.title}</h1>
     <p class="muted small">{game.game} · {data.cards.length.toLocaleString()} cards · prices from TCGplayer, {fmtDate(data.updated)}</p>
   </div>
@@ -204,9 +205,21 @@
     max-width: 900px;
     margin: 0 auto;
   }
+  /* Takes the whole row on phones, so the buttons wrap below it instead of squeezing it. */
+  .title {
+    flex: 1 1 280px;
+    min-width: 0;
+  }
   h1 {
     margin: 0;
     font-size: 1.5rem;
+  }
+  .back {
+    margin: 0 0 4px;
+  }
+  .back a {
+    color: var(--muted);
+    text-decoration: none;
   }
   h1 + p {
     margin: 2px 0 0;
