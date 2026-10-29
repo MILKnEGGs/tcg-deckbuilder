@@ -9,6 +9,7 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 | [Milk's Digimon Deck Builder](apps/digimon) | Digimon Card Game (English cards) | Standard |
 | [Milk's One Piece Deck Builder](apps/onepiece) | One Piece Card Game (English cards) | Standard, Extra Regulation |
 | [Milk's Union Arena Deck Builder](apps/unionarena) | Union Arena (English cards) | Official |
+| [Milk's Fusion World Deck Builder](apps/fusionworld) | Dragon Ball Super Card Game Fusion World (English cards) | Standard |
 | [Milk's UniVersus Deck Builder](apps/universus) | UniVersus (and Universal Fighting System) | Standard, Retro |
 | [Milk's Lorcana Deck Builder](apps/lorcana) | Disney Lorcana | Core, Infinity |
 | [Milk's Pokémon Deck Builder](apps/pokemon) | Pokémon TCG | Standard, Expanded |
@@ -44,6 +45,9 @@ Attuned symbols come from [UVS Ultra](https://uvsultra.online/), downloaded at m
 
 **Keeping Union Arena legal:** the restricted list is at the top of `apps/unionarena/src/game.ts`, from unionarena-tcg.com/na/rules/limited.php.
 Card data and pictures come from TCGplayer (via TCGCSV).
+
+**Keeping Fusion World legal:** the banned and restricted lists are at the top of `apps/fusionworld/src/game.ts`, from the "Banned/Restricted Cards" link on dbs-cardgame.com/fw/en/news/01_31.html (the official rules page).
+Card data and pictures come from TCGplayer (via TCGCSV); leaders' awakened sides are Bandai's own card images.
 
 ## How it's put together
 
