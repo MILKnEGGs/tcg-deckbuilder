@@ -29,7 +29,7 @@
     onAdd: (c: C) => void;
     onRemove: (c: C) => void;
     onConsider: (c: C, n?: number) => void;
-    onOpen: (c: C) => void;
+    onOpen: (c: C, list?: C[]) => void;
   } = $props();
 
   const PAGE = 90;
@@ -245,7 +245,7 @@
     {@const max = game.maxCopies(c, format, deck, index)}
     {@const bad = illegalIds.has(c.id)}
     <div class="tile" class:wide={img.landscape} class:in={n > 0} class:considered={m > 0 && !n} class:bad>
-      <button class="art" onclick={() => onOpen(c)} title={game.label(c)}>
+      <button class="art" onclick={() => onOpen(c, results)} title={game.label(c)}>
         <img src={img.src} alt={game.label(c)} loading="lazy" decoding="async" />
         {#if m}<span class="badge maybe-badge num">?{m}</span>{/if}
         {#if bad}<span class="badge bad-badge">Not legal</span>{/if}

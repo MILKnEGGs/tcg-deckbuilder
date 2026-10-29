@@ -208,7 +208,7 @@
 
     <div class="layout">
       <section class="search" class:hide={tab !== 'search'}>
-        <SearchPanel {game} {data} {index} {deck} {format} bind:onlyZone bind:target onAdd={add} onRemove={remove} onConsider={consider} onOpen={(c) => open(c)} />
+        <SearchPanel {game} {data} {index} {deck} {format} bind:onlyZone bind:target onAdd={add} onRemove={remove} onConsider={consider} onOpen={open} />
       </section>
       <section class="deck" class:hide={tab !== 'deck'}>
         <DeckPanel {game} {index} {deck} {format} {issues} {...shared} />
