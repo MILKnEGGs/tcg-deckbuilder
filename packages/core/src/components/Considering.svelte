@@ -19,7 +19,7 @@
     changed: () => void;
     onConsider: (c: C, n?: number) => void;
     onPromote: (c: C) => void;
-    onOpen: (c: C) => void;
+    onOpen: (c: C, list?: C[]) => void;
   } = $props();
 
   const rows = $derived(
@@ -42,7 +42,7 @@
             <span class="num">{e.qty}</span>
             <button class="step" onclick={() => c && onConsider(c)} disabled={!c} aria-label="Consider one more">+</button>
           </span>
-          <button class="cname" onclick={() => c && onOpen(c)}>
+          <button class="cname" onclick={() => c && onOpen(c, rows.flatMap((r) => (r.c ? [r.c] : [])))}>
             {#if c && game.cost(c) != null}<span class="cost num">{game.cost(c)}</span>{/if}
             <span class="label">{c ? game.label(c) : e.id}</span>
             {#if miss}<span class="miss small">{miss}</span>{/if}

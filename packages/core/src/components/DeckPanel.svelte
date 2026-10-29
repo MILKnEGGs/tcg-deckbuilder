@@ -35,7 +35,7 @@
     say: (msg: string) => void;
     onAdd: (c: C, zone?: string) => void;
     onRemove: (c: C, zone?: string) => void;
-    onOpen: (c: C) => void;
+    onOpen: (c: C, list?: C[]) => void;
     onPick: (zone: string) => void;
     onConsider: (c: C, n?: number) => void;
     onPromote: (c: C) => void;
@@ -63,6 +63,17 @@
       ]);
   }
 
+  /** The deck's cards in on-screen order (leaders first, then each zone by group), for the card view's arrows.
+   *  Built only when a card is opened, so editing the deck does no extra work. */
+  function shown(): C[] {
+    const ids = [
+      ...commandZones.flatMap((z) => (deck.zones[z.id] ?? []).map((e) => e.id)),
+      ...listZones.flatMap((z) => grouped(z.id).flatMap(([, rows]) => rows.map((r) => r.e.id))),
+    ];
+    return [...new Set(ids)].map((id) => index.get(id)).filter((c): c is C => !!c);
+  }
+  const view = (c: C) => onOpen(c, shown());
+
   function owned(zone: string, e: Entry) {
     cycleOwned(deck, zone, e.id);
     changed();
@@ -84,7 +95,7 @@
       {@const tag = c && game.qtyLabel ? game.qtyLabel(c, qty) : null}
       <div class="slot" class:flag-error={flagged.get(id) === 'error'} class:tall={c && !game.image(c).landscape}>
         {#if c}
-          <button class="slot-art" onclick={() => onOpen(c)} title={game.label(c)}>
+          <button class="slot-art" onclick={() => view(c)} title={game.label(c)}>
             <img src={game.image(c).src} alt={game.label(c)} />
           </button>
           {#if tag}<span class="slot-tag">{tag}</span>{/if}
@@ -107,7 +118,7 @@
       <span class="num">{e.qty}</span>
       <button class="step" onclick={() => c && onAdd(c, zone)} disabled={!c} aria-label="Add one">+</button>
     </span>
-    <button class="cname" onclick={() => c && onOpen(c)}>
+    <button class="cname" onclick={() => c && view(c)}>
       {#if c && game.cost(c) != null}<span class="cost num">{game.cost(c)}</span>{/if}
       <span class="namebox">
         <span class="label">{c ? game.label(c) : e.id}</span>
