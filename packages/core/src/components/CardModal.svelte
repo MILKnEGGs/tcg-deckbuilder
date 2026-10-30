@@ -4,6 +4,7 @@
   import { consideringCount, copies } from '../deck';
   import Badges from './Badges.svelte';
   import type { Card, CardIndex, Deck, FormatDef, GameDef } from '../types';
+  import { fmtRelease } from '../util';
 
   let {
     game,
@@ -87,6 +88,10 @@
           <dt>{k}</dt>
           <dd>{v}</dd>
         {/each}
+        {#if card.released}
+          <dt>Released</dt>
+          <dd>{fmtRelease(card.released)}</dd>
+        {/if}
       </dl>
       {#each game.text(card) as p, i (i)}
         <p class="text">{p}</p>

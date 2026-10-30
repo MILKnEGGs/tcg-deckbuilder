@@ -3,7 +3,7 @@
   import { consideringCount, copies } from '../deck';
   import Badges from './Badges.svelte';
   import type { Card, CardData, CardIndex, Deck, FormatDef, GameDef } from '../types';
-  import { money } from '../util';
+  import { fmtRelease, localDay, money } from '../util';
 
   let {
     game,
@@ -50,6 +50,7 @@
   let showFilters = $state(false);
   let showIllegal = $state(false);
   const maybe = $derived(target === 'considering' && !onlyZone);
+  const today = localDay();
 
   // Precomputed once per data load: search text and each filter's values per card.
   const prepared = $derived(
@@ -74,6 +75,7 @@
 
   const sorts = $derived.by(() => {
     const out = [{ id: 'name', label: 'Name' }, ...(game.noCostCurve ? [] : [{ id: 'cost', label: 'Cost' }]), { id: 'price', label: 'Price' }];
+    if (data.cards.some((c) => c.released)) out.push({ id: 'released', label: 'Release' });
     for (const f of game.filters) if (!out.some((o) => o.label.toLowerCase() === f.label.toLowerCase())) out.push({ id: `f:${f.id}`, label: f.label });
     return out;
   });
@@ -118,6 +120,7 @@
     const key = (p: P): number | null => {
       if (sort === 'cost') return game.cost(p.c);
       if (sort === 'price') return p.c.price ?? null;
+      if (sort === 'released') return p.c.released ? Date.parse(p.c.released) : null;
       const order = rank[sort.slice(2)];
       const at = (p.values[sort.slice(2)] ?? []).map((v) => order?.get(v)).filter((i): i is number => i != null);
       return at.length ? Math.min(...at) : null;
@@ -191,7 +194,7 @@
     />
     {#if q}<button class="clear-q" onclick={clearSearch} aria-label="Clear search" title="Clear search">×</button>{/if}
   </span>
-  <select bind:value={sort} aria-label="Sort by" title="Sort by">
+  <select bind:value={sort} onchange={() => (desc = sort === 'released')} aria-label="Sort by" title="Sort by">
     {#each sorts as o (o.id)}<option value={o.id}>{o.id === 'name' ? 'Name' : `By ${o.label.toLowerCase()}`}</option>{/each}
   </select>
   <button class="dir" onclick={() => (desc = !desc)} title={desc ? 'Descending: tap for ascending' : 'Ascending: tap for descending'} aria-label={desc ? 'Sorted descending' : 'Sorted ascending'}>
@@ -250,6 +253,7 @@
         {#if m}<span class="badge maybe-badge num">?{m}</span>{/if}
         {#if bad}<span class="badge bad-badge">Not legal</span>{/if}
         {#if game.badges}<span class="symbols"><Badges badges={game.badges(c)} /></span>{/if}
+        {#if sort === 'released' && c.released}<span class="badge date-badge" class:coming={c.released > today}>{fmtRelease(c.released, true)}</span>{/if}
       </button>
       <div class="controls">
         {#if maybe}
@@ -381,6 +385,17 @@
     right: auto;
     background: var(--error);
     color: #1a0505;
+  }
+  /* Sorted by release: each card's date, so you can see where a set starts. */
+  .date-badge {
+    top: auto;
+    bottom: 6px;
+    background: rgb(0 0 0 / 0.75);
+    color: #fff;
+    font-weight: 600;
+  }
+  .date-badge.coming {
+    background: var(--accent);
   }
   .symbols {
     position: absolute;

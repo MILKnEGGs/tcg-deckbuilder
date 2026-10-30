@@ -96,6 +96,7 @@ console.log(`TCGCSV: ${prices.size} prices from ${priced}/${groups.length} sets`
 // One card per name + subtitle + type.
 
 const setOrder = new Map(sets.map((s, i) => [s.code, i]));
+const setReleased = new Map(sets.map((s) => [s.code, s.released]));
 const byCard = new Map();
 for (const p of printings) {
   if (/token/i.test(p.Type ?? '')) continue;
@@ -179,6 +180,8 @@ for (const all of byCard.values()) {
     unique: !!main.Unique,
     rarity: main.Rarity,
     set: main.Set,
+    // First time the card came out, in any printing.
+    released: all.map((p) => setReleased.get(p.Set)).filter(Boolean).sort()[0],
     img: main.FrontArt?.replace('https://cdn.swu-db.com/images/cards/', '').replace(/\.png$/, ''),
     backImg: main.BackArt?.replace('https://cdn.swu-db.com/images/cards/', '').replace(/\.png$/, '') || undefined,
     price: cheapest?.price ?? fallbackPrice,

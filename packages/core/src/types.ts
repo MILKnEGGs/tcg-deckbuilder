@@ -13,6 +13,8 @@ export interface Card {
   tcgName?: string;
   /** Ids of the card's other printings, so imported decklists naming a reprint still resolve. */
   alt?: string[];
+  /** When the card first came out, in any printing ("2024-03-08"). Lets search sort by release. */
+  released?: string;
 }
 
 export interface CardData<C extends Card> {

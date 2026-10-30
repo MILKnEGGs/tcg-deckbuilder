@@ -61,8 +61,10 @@ try {
   console.warn(`  couldn't list branches, using develop only: ${err.message}`);
 }
 const released = new Map(); // set id -> earliest release date ('' when unknown)
+const promoSets = new Set();
 const addSets = (list, fromDevelop) => {
   for (const s of list) {
+    if (/promo/i.test(s.name)) promoSets.add(s.id);
     const date = (s.printings ?? []).map((p) => p.initial_release_date).filter(Boolean).sort()[0] ?? '';
     if (!released.has(s.id) || (date && date < released.get(s.id))) released.set(s.id, fromDevelop && !date ? '0' : date);
   }
@@ -107,6 +109,13 @@ for (const c of source) c.printings = c.printings.filter((p) => !(released.get(p
 // TCGplayer market prices by product id, non-foil first.
 const prices = new Map();
 const groups = (await getJson(`https://tcgcsv.com/tcgplayer/${TCG_CATEGORY}/groups`)).results;
+// A set that's out but has no date in the card data yet (IAR did) takes TCGplayer's. Not promo sets, whose
+// TCGplayer date is when the listing was made.
+const setDate = new Map();
+for (const [id, d] of released) {
+  const g = !promoSets.has(id) && (!d || d === '0') && groups.find((g) => g.abbreviation === id);
+  setDate.set(id, g ? g.publishedOn : d);
+}
 // New sets often reach the card data before their TCGplayer ids do (Armory Deck: Malice did). For those
 // printings, find the product in that set's TCGplayer listing by card number ("AMA005").
 const missing = new Set(source.flatMap((c) => c.printings.filter((p) => !p.tcgplayer_product_id).map((p) => p.set_id)));
@@ -236,6 +245,8 @@ for (const c of source) {
     rarity: RARITY[rarities.find((r) => r !== 'P' && r !== 'V' && r !== 'T') ?? rarities[0]] ?? undefined,
     set: pool[0].set_id,
     sets: [...new Set(all.map((p) => p.set_id))],
+    // First time the card came out, in any printing.
+    released: all.map((p) => setDate.get(p.set_id)?.slice(0, 10)).filter((d) => d && d !== '0').sort()[0],
     bad: Object.fromEntries(Object.entries(bad).filter(([, v]) => v)),
     restricted: c.ll_restricted ? ['ll'] : undefined,
     img: pic?.image_url,
