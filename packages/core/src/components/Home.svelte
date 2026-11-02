@@ -102,7 +102,7 @@
 
 <header>
   <div class="title">
-    <p class="back small"><a href="../">← All games</a></p>
+    <p class="back small"><a href="../">← All games</a> · <a href="https://milkneggs.github.io/pitch/tcg-deckbuilder.html" target="_blank" rel="noopener">See what it does</a></p>
     <h1>{game.title}</h1>
     <p class="muted small">{game.game} · {data.cards.length.toLocaleString()} cards · prices from TCGplayer, {fmtDate(data.updated)}</p>
   </div>
