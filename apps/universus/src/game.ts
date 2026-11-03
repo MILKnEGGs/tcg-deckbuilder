@@ -355,6 +355,8 @@ export const game: GameDef<UvsCard> = {
     { id: 'type', label: 'Type', values: (c) => [c.type], options: ['Character', 'Attack', 'Foundation', 'Action', 'Asset', 'Backup', 'Arena'] },
     { id: 'symbol', label: 'Symbol', values: (c) => c.symbols, options: [...SYMBOLS, 'Infinity'] },
     { id: 'attuned', label: 'Attuned', values: (c) => c.attuned ?? [], options: SYMBOLS },
+    // "Deadlock Stun: 3" and "Combo (Fury)" count as Deadlock Stun and Combo.
+    { id: 'keyword', label: 'Keyword', values: (c) => [...new Set((c.keywords ?? []).map((k) => k.replace(/\s*\(.*$/, '').replace(/:.*$/, '').trim()))], minCards: 5 },
     { id: 'difficulty', label: 'Difficulty', values: (c) => (c.difficulty == null ? [] : [c.difficulty >= 8 ? '8+' : String(c.difficulty)]), options: ['0', '1', '2', '3', '4', '5', '6', '7', '8+'] },
     { id: 'check', label: 'Check', values: (c) => (c.check == null ? [] : [String(c.check)]), options: ['0', '1', '2', '3', '4', '5', '6'] },
   ],

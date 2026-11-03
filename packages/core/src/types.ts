@@ -91,6 +91,8 @@ export interface FilterDef<C extends Card> {
   values(card: C): (string | number)[];
   /** Display order; defaults to sorted values found in the data. */
   options?: (string | number)[];
+  /** Only offer values at least this many cards have (keywords: leaves out typos and one-offs). */
+  minCards?: number;
 }
 
 export interface GoldfishDef<C extends Card = Card> {

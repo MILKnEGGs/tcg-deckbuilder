@@ -79,6 +79,31 @@ const html = (s) =>
     .replace(/\r/g, '')
     .replace(/\n{2,}/g, '\n')
     .trim() || undefined;
+/**
+ * TCGplayer's keyword line, cleaned up: "Charge,Weapon", "Fury - Weapon", "<em>Reversal</em>", "EX:2",
+ * "TENSION / RANGED" and "Stun: 1 Kick" all happen. Separators inside brackets stay ("Combo (Fury / Weapon)").
+ */
+function keywordList(raw) {
+  if (!raw) return undefined;
+  const kept = [];
+  const masked = raw
+    .replace(/<[^>]*>?/g, '')
+    .replace(/\([^()]*\)?/g, (m) => `\u0000${kept.push(m.endsWith(')') ? m : m + ')') - 1}\u0000`);
+  const out = masked
+    .split(/\s*[•·;,/]\s*|\s+[-–]\s+|(?<=:\s*\d+)\s+(?=[A-Za-z])/)
+    .map((k) =>
+      k
+        .replace(/\u0000(\d+)\u0000/g, (_, i) => kept[i])
+        .replace(/\s*:\s*/, ': ')
+        .replace(/\s*\(\s*/, ' (')
+        .replace(/[.\s]+$/, '')
+        .trim()
+        // All capitals ("RANGED") -> "Ranged"; short ones ("EX", "XP") stay.
+        .replace(/\b[A-Z]{3,}\b/g, (w) => w[0] + w.slice(1).toLowerCase()),
+    )
+    .filter(Boolean);
+  return out.length ? [...new Set(out)] : undefined;
+}
 const num = (v) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? null : Number(v));
 const loose = (s) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 /** A trailing "(...)" that tags a printing, not part of the card's name. */
@@ -219,7 +244,7 @@ for (const list of byKey.values()) {
     attackZone: x.AttackZone || undefined,
     handSize: num(x.HandSize),
     health: num(x.Vitality),
-    keywords: x.Keywords ? x.Keywords.split(/\s*[•·;]\s*/).filter(Boolean) : undefined,
+    keywords: keywordList(x.Keywords),
     text: html(x.Description),
     rarity: x.Rarity ?? '',
     set: first.set,

@@ -65,7 +65,9 @@
   const options = $derived(
     Object.fromEntries(
       game.filters.map((f) => {
-        const seen = new Set(prepared.flatMap((p) => p.values[f.id]));
+        const counts = new Map<string | number, number>();
+        for (const p of prepared) for (const v of p.values[f.id]) counts.set(v, (counts.get(v) ?? 0) + 1);
+        const seen = new Set([...counts].filter(([, n]) => n >= (f.minCards ?? 1)).map(([v]) => v));
         const listed = (f.options ?? []).filter((o) => seen.has(o));
         const rest = [...seen].filter((o) => !listed.includes(o)).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
         return [f.id, [...listed, ...rest]];
