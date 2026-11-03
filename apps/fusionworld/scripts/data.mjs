@@ -108,7 +108,10 @@ await pool(groups, 4, async (g) => {
       if (p.subTypeName === 'Normal' || !price.has(p.productId)) price.set(p.productId, v);
     }
     for (const p of items) {
-      const number = field(p, 'Number')?.trim().toUpperCase();
+      // A number in the name ("Piccolo - FB10-067") wins: TCGplayer lists that card's number as FB10-068,
+      // which would merge it into a different Piccolo.
+      const named = /\s-\s((?:FB|FS|SB|ST)\d{2}-\d{2,3}|FP-\d{3})\b/i.exec(p.name)?.[1];
+      const number = (named ?? field(p, 'Number'))?.trim().toUpperCase();
       const type = field(p, 'CardType');
       // Energy markers and sealed product have no card type.
       if (!number || !type) continue;
