@@ -125,7 +125,8 @@ const cleanName = (n) => {
   }
   // Otherwise drop tags that clearly mark a printing.
   for (let i = 0; i < 3 && VARIANT.test(best); i++) best = best.replace(VARIANT, '');
-  return best;
+  // The number can also come before a tag: "Tsuyu Asui - 100/153 (XR)".
+  return best.replace(/\s+-\s+\d+\s*\/\s*\d+$/, '');
 };
 const SYMBOL_NAMES = ['Air', 'All', 'Chaos', 'Death', 'Earth', 'Evil', 'Fire', 'Good', 'Life', 'Order', 'Void', 'Water'];
 /** "Chaos;Earth;Fire" -> ["Chaos","Earth","Fire"]; "Inf;Inf;Inf" -> ["Infinity"]. */
@@ -188,7 +189,11 @@ console.log(`UVS Ultra: ${attunedByName.size} attuned cards, ${symbolsByName.siz
 
 // Fill in symbols TCGplayer left blank, then group printings into cards.
 plainNames = new Set(products.filter((x) => !TRAILING.test(x.p.name)).map((x) => loose(x.p.name)));
+// TCGplayer types the odd character printing as something else (Jet Burn's Tsuyu Asui 100/153 is a
+// "Foundation") while another printing with the same set and number is a character.
+const characterNumbers = new Set(products.filter((x) => x.x.CardType === 'Character' && x.x.Number).map((x) => `${x.set}|${x.x.Number}`));
 for (const x of products) {
+  if (x.x.CardType !== 'Character' && x.x.HandSize && characterNumbers.has(`${x.set}|${x.x.Number}`)) x.x.CardType = 'Character';
   x.name = cleanName(x.p.name);
   x.symbols = symbolsOf(x.x.Resource);
   if (!x.symbols.length) x.symbols = symbolsByName.get(loose(x.name)) ?? [];
@@ -251,18 +256,25 @@ const cards = [];
 const usedIds = new Set();
 for (const list of byKey.values()) {
   list.sort((a, b) => a.released.localeCompare(b.released) || a.p.productId - b.p.productId);
-  // The standard printing has the plain name; then cheapest.
-  const shortest = Math.min(...list.map((x) => x.p.name.length));
-  const standard = list.filter((x) => x.p.name.length === shortest).sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  // The standard printing has the plain name ("- 100/153" aside); then cheapest.
+  const bare = (x) => x.p.name.replace(/\s+-\s+\d+\s*\/\s*\d+/, '').length;
+  const shortest = Math.min(...list.map(bare));
+  const standard = list.filter((x) => bare(x) === shortest).sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
   const main = standard[0];
   const first = list[0];
   const x = main.x;
 
   // A stable id from the first printing's set number: "GDZ01 1/186" -> "GDZ01-1".
-  const numMatch = /^(.*?)\s*#?(\d+[a-z]?)\s*\/\s*\d+/i.exec(first.x.Number ?? '');
-  let id = numMatch ? `${(numMatch[1] || first.setCode || 'UVS').replace(/\s+/g, '')}-${numMatch[2]}` : `TCG-${first.p.productId}`;
+  const baseId = (y) => {
+    const m = /^(.*?)\s*#?(\d+[a-z]?)\s*\/\s*\d+/i.exec(y.x.Number ?? '');
+    return m ? `${(m[1] || y.setCode || 'UVS').replace(/\s+/g, '')}-${m[2]}` : `TCG-${y.p.productId}`;
+  };
+  let id = baseId(first);
   if (usedIds.has(id)) id = `${id}-${first.p.productId}`;
   usedIds.add(id);
+  // Ids this card's printings had when the data split them differently (a fix merging duplicates), so
+  // saved decks still find it. Kept only where no other card has that id.
+  const oldIds = list.flatMap((y) => [baseId(y), `${baseId(y)}-${y.p.productId}`]).filter((a) => a !== id);
 
   const ip = first.ip ?? list.find((y) => y.ip)?.ip ?? ipByName.get(loose(main.name)) ?? MIXED_FALLBACK.find(([re]) => re.test(first.set))?.[1] ?? 'Other';
   const real = list.filter((y) => !y.promoSet);
@@ -295,7 +307,12 @@ for (const list of byKey.values()) {
     price: main.price,
     tcg: main.p.productId,
     tcgName: main.p.name,
+    alt: oldIds,
   });
+}
+for (const c of cards) {
+  const alt = [...new Set(c.alt)].filter((a) => !usedIds.has(a));
+  c.alt = alt.length ? alt : undefined;
 }
 cards.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 
