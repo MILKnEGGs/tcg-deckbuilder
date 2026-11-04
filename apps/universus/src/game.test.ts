@@ -107,7 +107,7 @@ describe('UniVersus deck rules', () => {
     const blocker = card('Armin Arlert', 'Character', ['Death'], { difficulty: 4, check: 4 });
     const erenInDeck = card('Eren Jaeger', 'Character', ['Death', 'Fire', 'Order'], { difficulty: 5, check: 3 });
     const local = indexCards({ updated: '', cards: [...all, blocker, erenInDeck] });
-    const d = newDeck(std);
+    const d = newDeck(std, 'test');
     expect(addCard(game, d, std, blocker, undefined, local)).toBeNull();
     expect(d.zones.character).toEqual([{ id: blocker.id, qty: 1, owned: 0 }]);
     for (let i = 0; i < 3; i++) expect(addCard(game, d, std, blocker, undefined, local)).toBeNull();
