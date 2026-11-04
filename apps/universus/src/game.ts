@@ -386,6 +386,16 @@ export const game: GameDef<UvsCard> = {
     },
   },
   toggles: [
+    // For choosing a primary symbol: everything the character could use with any of its symbols.
+    // (The Symbol and Attuned chips can't do this together: separate filters must both match.)
+    {
+      id: 'anySymbol',
+      label: "Fits any of my character's symbols",
+      test: (c, deck, cards) => {
+        const ch = characterOf(deck, cards);
+        return !ch || c.type === 'Character' || !c.symbols.length || characterSymbols(ch).some((s) => !!fitReason(c, s, ch));
+      },
+    },
     {
       id: 'ip',
       label: 'Same IP as my character',
