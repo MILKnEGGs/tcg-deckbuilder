@@ -45,7 +45,7 @@ export function setQty(deck: Deck, zone: string, id: string, qty: number): void 
  * Adds one copy where the game says the card goes, unless that would break the copy limit or the
  * zone's hard cap. Returns why it couldn't, or null on success.
  */
-export function addCard<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C, zone = game.zoneFor(card, format), cards?: CardIndex<C>): string | null {
+export function addCard<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C, zone = game.zoneFor(card, format, deck), cards?: CardIndex<C>): string | null {
   if (!zone) return `${game.label(card)} can't go in a ${format.name} deck`;
   const why = game.illegal?.(card, format);
   if (why) return `${game.label(card)}: ${why}`;
@@ -82,11 +82,11 @@ export function setConsidering(deck: Deck, id: string, qty: number): void {
 export function considerToDeck<C extends Card>(game: GameDef<C>, deck: Deck, format: FormatDef, card: C, cards?: CardIndex<C>): string | null {
   const e = considering(deck).find((x) => x.id === card.id);
   if (!e) return null;
-  const err = addCard(game, deck, format, card, undefined, cards);
+  const zone = game.zoneFor(card, format, deck);
+  const err = addCard(game, deck, format, card, zone, cards);
   if (err) return err;
   // Owned copies come along with it.
-  if (e.owned > 0) {
-    const zone = game.zoneFor(card, format)!;
+  if (zone && e.owned > 0) {
     const d = zoneEntries(deck, zone).find((x) => x.id === card.id)!;
     d.owned = Math.min(d.qty, d.owned + 1);
     e.owned--;
@@ -217,7 +217,8 @@ export function rehome<C extends Card>(game: GameDef<C>, deck: Deck, cards: Card
     for (const e of [...(deck.zones[z.id] ?? [])]) {
       const c = cards.get(e.id);
       const home = c ? game.zoneFor(c, format) : null;
-      if (!home || home === z.id || !format.zones.some((x) => x.id === home)) continue;
+      // Where it would go in this deck counts too (a UniVersus character in the deck stays there).
+      if (!home || home === z.id || game.zoneFor(c!, format, deck) === z.id || !format.zones.some((x) => x.id === home)) continue;
       deck.zones[z.id] = deck.zones[z.id].filter((x) => x !== e);
       const dest = zoneEntries(deck, home);
       const d = dest.find((x) => x.id === e.id);

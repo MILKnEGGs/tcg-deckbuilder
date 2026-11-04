@@ -103,6 +103,23 @@ describe('UniVersus deck rules', () => {
     expect(messages(full)).toContain('warning: Sideboard: 3/10. Tournament sideboards are exactly 10 (or none)');
   });
 
+  it('puts more characters in the deck once there is a starting character', () => {
+    const blocker = card('Armin Arlert', 'Character', ['Death'], { difficulty: 4, check: 4 });
+    const erenInDeck = card('Eren Jaeger', 'Character', ['Death', 'Fire', 'Order'], { difficulty: 5, check: 3 });
+    const local = indexCards({ updated: '', cards: [...all, blocker, erenInDeck] });
+    const d = newDeck(std);
+    expect(addCard(game, d, std, blocker, undefined, local)).toBeNull();
+    expect(d.zones.character).toEqual([{ id: blocker.id, qty: 1, owned: 0 }]);
+    for (let i = 0; i < 3; i++) expect(addCard(game, d, std, blocker, undefined, local)).toBeNull();
+    expect(d.zones.main).toEqual([{ id: blocker.id, qty: 3, owned: 0 }]);
+    // Four in all, the starting one included.
+    expect(addCard(game, d, std, blocker, undefined, local)).toMatch(/Max 4/);
+    expect(addCard(game, d, std, erenInDeck, undefined, local)).toBeNull();
+    expect(d.zones.main.find((e) => e.id === erenInDeck.id)?.qty).toBe(1);
+    // No difficulty or check: it can only be the starting character.
+    expect(game.zoneFor(eren, std, d)).toBe('character');
+  });
+
   it('counts copies across the deck and sideboard', () => {
     const d = erenDeck();
     setQty(d, 'side', deathFoundations[0].id, 1);

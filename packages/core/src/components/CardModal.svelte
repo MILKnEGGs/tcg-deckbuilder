@@ -45,7 +45,7 @@
   const img = $derived(game.image(card));
   const n = $derived(copies(deck, card.id));
   const max = $derived(game.maxCopies(card, format, deck, index));
-  const home = $derived(game.zoneFor(card, format));
+  const home = $derived(game.zoneFor(card, format, deck));
   const hasSide = $derived(home === 'main' && format.zones.some((z) => z.id === 'side'));
   const inSide = $derived(copies(deck, card.id, ['side']));
   const maybe = $derived(consideringCount(deck, card.id));

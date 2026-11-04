@@ -105,8 +105,8 @@
     let hidden = 0;
     const out = prepared
       .filter((p) => {
-        const zone = game.zoneFor(p.c, format);
-        if (onlyZone ? zone !== onlyZone : !zone || (browsing && command.has(zone))) return false;
+        const zone = game.zoneFor(p.c, format, deck);
+        if (onlyZone ? zone !== onlyZone && game.zoneFor(p.c, format) !== onlyZone : !zone || (browsing && command.has(zone))) return false;
         for (const w of words) if (!p.text.includes(w)) return false;
         for (const [id, v] of active) if (!p.values[id].some((x) => v.includes(x))) return false;
         if (fit && game.fit && !game.fit.test(p.c, deck, index, format)) return false;

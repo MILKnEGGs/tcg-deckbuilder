@@ -321,7 +321,10 @@ export const game: GameDef<UvsCard> = {
   title: "Milk's UniVersus Deck Builder",
   game: 'UniVersus',
   formats,
-  zoneFor: (c) => (c.type === 'Character' ? 'character' : 'main'),
+  // Once there's a starting character, other characters (and more copies of it) go in the deck, where they
+  // block or attach to it. Only ones with a printed difficulty and check can; the rest replace it.
+  zoneFor: (c, _format, deck) =>
+    c.type !== 'Character' ? 'main' : deck?.zones.character?.length && c.difficulty != null && c.check != null ? 'main' : 'character',
   maxCopies,
   illegal: (c, f) => illegal(c, f),
   validate,

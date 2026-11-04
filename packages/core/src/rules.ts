@@ -61,7 +61,7 @@ export function misplaced<C extends Card>(game: GameDef<C>, deck: Deck, cards: C
       if (!c) return false;
       const home = game.zoneFor(c, format);
       // Cards that go in the main deck may also sit in a sideboard.
-      return home !== z.id && !(home === 'main' && z.id === 'side');
+      return home !== z.id && game.zoneFor(c, format, deck) !== z.id && !(home === 'main' && z.id === 'side');
     });
     if (bad.length)
       issues.push({

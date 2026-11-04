@@ -188,8 +188,11 @@ export interface GameDef<C extends Card> {
   /** Game name, e.g. "Star Wars: Unlimited". */
   game: string;
   formats: FormatDef[];
-  /** Where a card goes when added in this format, or null if it can't be added at all. */
-  zoneFor(card: C, format: FormatDef): string | null;
+  /**
+   * Where a card goes when added in this format, or null if it can't be added at all. With the deck, where
+   * the next copy goes (UniVersus: a character goes in the deck once there's a starting character).
+   */
+  zoneFor(card: C, format: FormatDef, deck?: Deck): string | null;
   /**
    * Most copies of this card allowed, counted across all zones. Caps the + button. The deck is passed
    * where known, for limits that depend on it (UniVersus: a character allowing 8 copies of one card).

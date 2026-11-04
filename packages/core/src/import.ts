@@ -1,6 +1,6 @@
 // Plain-text decklists ("3 Card Name" per line), which most sites and people can produce.
 
-import type { Card, CardIndex, Entry, FormatDef, GameDef, Imported } from './types';
+import type { Card, CardIndex, Deck, Entry, FormatDef, GameDef, Imported } from './types';
 
 const norm = (s: string) =>
   s
@@ -73,7 +73,7 @@ export function parseTextDeck<C extends Card>(game: GameDef<C>, text: string, ca
       skipped.push(raw.trim());
       continue;
     }
-    const home = game.zoneFor(card, format) ?? 'main';
+    const home = game.zoneFor(card, format, { zones } as unknown as Deck) ?? 'main';
     const zone = side && sideZone && home === 'main' ? 'side' : home;
     const list = (zones[zone] ??= []);
     const e = list.find((x) => x.id === card.id);

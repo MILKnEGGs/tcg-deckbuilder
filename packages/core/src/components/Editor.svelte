@@ -83,7 +83,8 @@
 
   function add(card: C, zone?: string) {
     if (!deck) return;
-    const z = zone ?? game.zoneFor(card, format);
+    // Choosing a slot's card (onlyZone) puts it there; otherwise the game says where the next copy goes.
+    const z = zone ?? (onlyZone && game.zoneFor(card, format) === onlyZone ? onlyZone : game.zoneFor(card, format, deck));
     const def = format.zones.find((x) => x.id === z);
     // A full single-card slot (a leader or base in most formats) swaps instead of refusing.
     if (def?.command && def.max === 1 && (deck.zones[def.id]?.length ?? 0) > 0 && !game.illegal?.(card, format)) deck.zones[def.id] = [];
