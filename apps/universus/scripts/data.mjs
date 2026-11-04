@@ -196,6 +196,47 @@ for (const x of products) {
 }
 const byKey = new Map();
 for (const x of products) (byKey.get(x.key) ?? byKey.set(x.key, []).get(x.key)).push(x);
+// Versions of a character can match on all of those (Tsuyu Asui I and II) but not on health. Hand size
+// isn't used: TCGplayer gets it wrong on some reprints. Printings without a health go with the most common one.
+for (const [key, list] of [...byKey]) {
+  if (list[0].x.CardType !== 'Character') continue;
+  const byHealth = new Map();
+  for (const x of list) if (x.x.Vitality) (byHealth.get(x.x.Vitality) ?? byHealth.set(x.x.Vitality, []).get(x.x.Vitality)).push(x);
+  if (byHealth.size < 2) continue;
+  const parts = [...byHealth.values()].sort((a, b) => b.length - a.length);
+  parts[0].push(...list.filter((x) => !x.x.Vitality));
+  // The part with the oldest printing keeps the key, and so the id it had before.
+  const oldest = (p) => p.map((x) => x.released).sort()[0];
+  parts.sort((a, b) => oldest(a).localeCompare(oldest(b)));
+  byKey.set(key, parts[0]);
+  parts.slice(1).forEach((p, i) => byKey.set(`${key}|${i + 1}`, p));
+}
+// Cards from different sets can match on everything and still be different cards, with different rules
+// text: Skull Man in Mega Man and in the Capcom Platinum Series, a 2024 Dabi promo. Each set's text is its
+// plainest printing's; TCGplayer's XR and chrome listings sometimes carry another card's text, so printings
+// within one set are never split. Flavor text (after a quote) doesn't count.
+const ruleWords = (x) => new Set((x.x.Description ?? '').replace(/<[^>]+>/g, ' ').split(/["“”]/)[0].toLowerCase().match(/[a-z]+|\d+/g) ?? []);
+const overlap = (a, b) => {
+  if (!a.size || !b.size) return 1;
+  let same = 0;
+  for (const w of a) if (b.has(w)) same++;
+  return same / Math.min(a.size, b.size);
+};
+for (const [key, list] of [...byKey]) {
+  const bySet = new Map();
+  for (const x of list) (bySet.get(x.set) ?? bySet.set(x.set, []).get(x.set)).push(x);
+  if (bySet.size < 2) continue;
+  const parts = []; // { words, printings }
+  for (const printings of [...bySet.values()].sort((a, b) => a[0].released.localeCompare(b[0].released))) {
+    const words = ruleWords([...printings].sort((a, b) => a.p.name.length - b.p.name.length)[0]);
+    const same = parts.find((p) => overlap(p.words, words) >= 0.5);
+    if (same) same.printings.push(...printings);
+    else parts.push({ words, printings });
+  }
+  if (parts.length < 2) continue;
+  byKey.set(key, parts[0].printings);
+  parts.slice(1).forEach((p, i) => byKey.set(`${key}|text${i + 1}`, p.printings));
+}
 
 // Standard: sets released this year and the two before, counting from the newest set that's out.
 // ("When the first set of 2027 releases ... all sets released in 2024 will rotate out.")

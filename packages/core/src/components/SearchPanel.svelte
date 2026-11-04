@@ -278,6 +278,11 @@
   <div class="more">
     <button onclick={() => (limit += PAGE * 2)}>Show more ({(results.length - limit).toLocaleString()} left)</button>
   </div>
+{:else if !results.length && found.hidden}
+  <p class="none muted">
+    No {format.name}-legal cards match.
+    <button class="ghost small" onclick={() => (showIllegal = true)}>Show {found.hidden} not legal in {format.name}</button>
+  </p>
 {:else if !results.length}
   <p class="none muted">No cards match.</p>
 {/if}
