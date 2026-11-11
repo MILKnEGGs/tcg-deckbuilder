@@ -187,7 +187,7 @@
         <label class="option">
           <span class="small muted">{opt.label}</span>
           <select value={deck.options?.[opt.id] ?? ''} onchange={(e) => setOption(opt.id, e.currentTarget.value)}>
-            <option value="">Auto{auto ? ` (${choices.find((c) => c.value === auto)?.label ?? auto})` : ''}</option>
+            <option value="">{opt.none ?? 'Auto'}{auto ? ` (${choices.find((c) => c.value === auto)?.label ?? auto})` : ''}</option>
             {#each choices as c (c.value)}<option value={c.value}>{c.label}{c.hint ? ` · ${c.hint}` : ''}</option>{/each}
           </select>
         </label>

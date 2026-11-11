@@ -14,6 +14,7 @@ Live at https://milkneggs.github.io/tcg-deckbuilder/.
 | [Milk's Lorcana Deck Builder](apps/lorcana) | Disney Lorcana | Core, Infinity |
 | [Milk's Pokémon Deck Builder](apps/pokemon) | Pokémon TCG | Standard, Expanded |
 | [Milk's Flesh and Blood Deck Builder](apps/fab) | Flesh and Blood | Classic Constructed, Blitz, Silver Age, Living Legend |
+| [Milk's Alpha Clash Deck Builder](apps/alphaclash) | Alpha Clash | Constructed, Casual |
 | [Milk's Destiny Deck Builder](apps/destiny) | Star Wars: Destiny (official + A Renewed Hope community sets) | ARH Standard, Galactic Infinite, FFG Standard, FFG Trilogy, FFG Infinite |
 
 Every deck has a Build view (search and list side by side) and a Deck view (the deck as card images, with stats).
@@ -38,6 +39,10 @@ The Expanded banned list is at the top of `apps/pokemon/src/game.ts` (`EXPANDED_
 
 **Keeping Destiny legal:** nothing to maintain by hand. Cards, legal sets, bans, the restricted list and pairs, and per-format point changes all come from the [A Renewed Hope](https://swdrenewedhope.com/) database each day.
 Community sets are free print-and-play; TCGplayer prices exist only for official Fantasy Flight cards.
+
+**Keeping Alpha Clash legal:** the ban lists are `SEASONS` at the top of `apps/alphaclash/src/game.ts`, from alphaclashtcg.com/play/ban-errata.
+From 2027 each three-month Season brings a new list (bans, Limited (X) and errata that add deck building restrictions), announced at least four weeks ahead; add it with its start date and the app switches over on that day.
+Card data and pictures come from TCGplayer (via TCGCSV). TCGplayer has no Contender role symbols (Destroyer, Savior, Sentinel), so each deck picks its Contender's role.
 
 **Keeping UniVersus legal:** the ban lists are at the top of `apps/universus/src/game.ts`, from uvsgames.com/news/formats-and-ban-lists/. UVS Games updates them on the first Tuesday of each month.
 Standard rotation (sets from the last three years) is worked out daily by `apps/universus/scripts/data.mjs`.

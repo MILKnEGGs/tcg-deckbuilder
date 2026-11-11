@@ -157,6 +157,8 @@ export interface DeckOptionDef<C extends Card = Card> {
   choices(deck: Deck, cards: CardIndex<C>): { value: string; label: string; hint?: string }[];
   /** What "Auto" picks. */
   auto(deck: Deck, cards: CardIndex<C>): string | null;
+  /** Label for the empty choice instead of "Auto", where nothing is picked automatically ("Not set"). */
+  none?: string;
 }
 
 /** A small tag drawn on a card (UniVersus symbols). `square` marks an attuned symbol. */
