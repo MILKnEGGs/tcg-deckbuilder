@@ -45,6 +45,15 @@ async function pool(items, size, fn) {
 }
 
 const field = (p, name) => (p.extendedData ?? []).find((e) => e.name === name)?.value;
+/** TCGplayer's rarity as a full name: since 2026-11-10 TCGplayer lists codes ("UC", "E"). */
+const RARITY = {
+  C: 'Common', UC: 'Uncommon', R: 'Rare', E: 'Epic', L: 'Legendary', P: 'Promo', ST: 'Starter Rare',
+  IR: 'Iconic Rare', IA: 'Iconic Art', AR: 'Alpha Rare',
+};
+const rarityOf = (p) => {
+  const v = field(p, 'Rarity')?.trim() ?? '';
+  return RARITY[v] ?? v;
+};
 const num = (v) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? null : Number(v));
 const list = (v) => (v ?? '').split(';').map((s) => s.trim()).filter(Boolean);
 const html = (s) =>
@@ -275,7 +284,7 @@ for (const printings of byName.values()) {
     keywords: deckKeywords(text),
     restriction: restriction(text),
     text,
-    rarity: field(first.p, 'Rarity') ?? '',
+    rarity: rarityOf(first.p),
     set: first.set,
     sets: [...new Set(printings.map((x) => x.set))],
     released: (printings.filter((x) => !x.promoSet).length ? printings.filter((x) => !x.promoSet) : printings).map((x) => x.released).sort()[0],
@@ -333,6 +342,14 @@ for (const c of cards) {
   ids.set(c.id, c.name);
 }
 cards.sort((a, b) => a.name.localeCompare(b.name));
+
+// If TCGplayer changes how it labels card types (as it did with rarities on 2026-11-10), fail here so the
+// deploy stops and the site keeps yesterday's cards, instead of publishing an app that can't build decks.
+const cardTypeMinimums = { Contender: 40, Clash: 400, Action: 150 };
+for (const [type, min] of Object.entries(cardTypeMinimums)) {
+  const n = cards.filter((c) => c.type === type).length;
+  if (n < min) throw new Error(`Only ${n} ${type} cards found (expected at least ${min}): has TCGplayer changed its card fields?`);
+}
 
 mkdirSync(new URL('.', OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), cards }));

@@ -156,6 +156,14 @@ for (const c of cards) {
   c.series = SPELLING[c.series] ?? c.series;
 }
 
+// If TCGplayer changes how it labels card types (as it did with rarities on 2026-11-10), fail here so the
+// deploy stops and the site keeps yesterday's cards, instead of publishing an app that can't build decks.
+const cardTypeMinimums = { Character: 1500, Event: 200 };
+for (const [type, min] of Object.entries(cardTypeMinimums)) {
+  const n = cards.filter((c) => c.type === type).length;
+  if (n < min) throw new Error(`Only ${n} ${type} cards found (expected at least ${min}): has TCGplayer changed its card fields?`);
+}
+
 mkdirSync(new URL('.', OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), cards }));
 const priced = cards.filter((c) => c.price != null).length;
