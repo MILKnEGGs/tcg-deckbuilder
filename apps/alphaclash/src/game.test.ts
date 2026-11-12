@@ -168,6 +168,17 @@ describe.skipIf(!real)('Alpha Clash ban lists against the card data', () => {
     const listed = SEASONS.flatMap((s) => [...s.banned, ...Object.keys(s.limited), ...Object.keys(s.restrict)]);
     expect(listed.filter((n) => !names.has(n))).toEqual([]);
   });
+
+  it('takes DeckPlanet names, Contender health and two-sided Contenders', () => {
+    const byName = new Map(real!.cards.map((c) => [c.name, c]));
+    expect(byName.has('Death, the Redeemer')).toBe(true);
+    expect(byName.has('Death, the eemer')).toBe(false);
+    expect(byName.get('Clarity, Ageless Defender')?.health).toBe(30);
+    expect(byName.get('Clarity, Defender of All')?.back?.name).toBe('Clarity, Deadly Duelist');
+    expect(byName.has('Clarity, Deadly Duelist')).toBe(false);
+    const contenders = real!.cards.filter((c) => c.type === 'Contender');
+    expect(contenders.filter((c) => c.health == null).length).toBeLessThan(5);
+  });
 });
 
 describe('Alpha Clash decklists', () => {

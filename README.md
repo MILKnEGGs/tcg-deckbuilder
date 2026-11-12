@@ -41,6 +41,8 @@ The Expanded banned list is at the top of `apps/pokemon/src/game.ts` (`EXPANDED_
 Community sets are free print-and-play; TCGplayer prices exist only for official Fantasy Flight cards.
 
 **Keeping Alpha Clash legal:** the ban lists are `SEASONS` at the top of `apps/alphaclash/src/game.ts`, from alphaclashtcg.com/play/ban-errata.
+
+**Alpha Clash card details:** cards and prices come from TCGplayer daily. [DeckPlanet](https://deckplanet.net/alpha_clash/card-db), the game's official card database, sent us an export, which is trimmed into `apps/alphaclash/data/deckplanet.json`. It corrects TCGplayer's misspelled names and adds Contender health, errata and two-sided Contenders. When DeckPlanet sends a newer export, run `node scripts/deckplanet.mjs <file>` in `apps/alphaclash`, then `npm run data`.
 From 2027 each three-month Season brings a new list (bans, Limited (X) and errata that add deck building restrictions), announced at least four weeks ahead; add it with its start date and the app switches over on that day.
 Card data and pictures come from TCGplayer (via TCGCSV). TCGplayer has no Contender role symbols (Destroyer, Savior, Sentinel), so each deck picks its Contender's role.
 

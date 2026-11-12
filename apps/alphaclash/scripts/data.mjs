@@ -1,17 +1,20 @@
 // Builds public/data/cards.json for the Alpha Clash app from TCGCSV (a daily copy of TCGplayer's catalog and
 // prices). TCGplayer lists every card with what deck building needs: type, subtype, color, cost, attack and
 // defense, character name, planet, affiliation and text (where the deck building restrictions and Unrivaled
-// are printed). It lacks a Contender's role symbol (Destroyer, Savior, Sentinel) and starting health, so the
-// app asks for the role per deck. Run with "npm run data"; the deploy workflow runs it daily.
+// are printed). It lacks a Contender's role symbol (Destroyer, Savior, Sentinel), so the app asks for the
+// role per deck. DeckPlanet's export (data/deckplanet.json, see deckplanet.mjs) corrects TCGplayer's
+// misspelled names and adds Contender health, errata and two-sided Contenders. Run with "npm run data";
+// the deploy workflow runs it daily.
 //
 // A card is its English name: the 4-copy limit counts names (rule 100.2b), so reprints, promos and alt arts
 // are the same card. Its id is the number of its first regular printing ("AC1-071"); its price is the
 // cheapest standard printing.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const TCG_CATEGORY = 78; // TCGCSV / TCGplayer category for Alpha Clash
 const OUT = new URL('../public/data/cards.json', import.meta.url);
+const DECKPLANET = new URL('../data/deckplanet.json', import.meta.url);
 // TCGCSV refuses requests without a User-Agent that says who's asking.
 const HEADERS = { 'User-Agent': 'milks-deckbuilder/0.1 (+https://github.com/MILKnEGGs/tcg-deckbuilder)' };
 const DECK_TYPES = new Set(['Contender', 'Clashground', 'Clash', 'Accessory', 'Action']);
@@ -138,7 +141,7 @@ await pool(groups, 4, async (g) => {
       // Sealed product, tokens, bosses and role cards.
       if (!number || !DECK_TYPES.has(type)) continue;
       if (BOSS_SUBTYPES.has(field(p, 'CardSubtype'))) continue;
-      products.push({ p, number, type, set: g.abbreviation, promoSet: isPromoSet(g), released: g.publishedOn.slice(0, 10), price: price.get(p.productId) ?? null });
+      products.push({ p, name: cleanName(p.name), number, type, set: g.abbreviation, promoSet: isPromoSet(g), released: g.publishedOn.slice(0, 10), price: price.get(p.productId) ?? null });
     }
   } catch (err) {
     console.warn(`  skipped ${g.name}: ${err.message}`);
@@ -152,6 +155,37 @@ console.log(`TCGCSV: ${products.length} card products in ${groups.length - early
 // that differ by one letter have different types ("Clarify" is an Action, "Clarity" a Clash card), and
 // card numbers alone don't do: TCGplayer gives some Year of the Dragon cards another card's number.
 const key = (n) => cleanName(n).toLowerCase().replace(/[’‘`]/g, "'");
+// DeckPlanet's names are checked against the cards, so a printing whose number DeckPlanet lists under a
+// close name ("Death, the eemer" -> "Death, the Redeemer") takes DeckPlanet's spelling. Only close names:
+// TCGplayer gives some Year of the Dragon cards another card's number.
+const deckplanet = existsSync(DECKPLANET) ? JSON.parse(readFileSync(DECKPLANET, 'utf8')) : [];
+const dpNumber = new Map(deckplanet.map((d) => [d.number, d]));
+const dpNames = new Set(deckplanet.map((d) => key(d.name)));
+/** Edit distance (Levenshtein), ignoring spaces and punctuation. */
+function distance(a, b) {
+  a = a.replace(/[^a-z0-9]/g, '');
+  b = b.replace(/[^a-z0-9]/g, '');
+  let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i];
+    for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    row = next;
+  }
+  return row[b.length];
+}
+const close = (a, b) => a.startsWith(b) || b.startsWith(a) || distance(a, b) <= Math.min(5, Math.floor(Math.max(a.length, b.length) / 4));
+let renamed = 0;
+for (const x of products) {
+  const d = dpNumber.get(x.number);
+  if (!d || key(d.name) === key(x.name) || dpNames.has(key(x.name))) continue;
+  if (d.type && DECK_TYPES.has(d.type) && d.type !== x.type) continue;
+  if (!close(key(x.name), key(d.name))) continue;
+  if (process.env.SHOW_RENAMES) console.log(`  ${x.number}: ${x.name} -> ${d.name}`);
+  x.name = d.name;
+  renamed++;
+}
+console.log(`DeckPlanet: ${deckplanet.length} printings, ${renamed} TCGplayer names corrected`);
+
 /** Edit distance at most 1 (a swap of neighbours counts as one), ignoring spaces and punctuation. */
 function typoApart(a, b) {
   a = a.replace(/[^a-z0-9]/g, '');
@@ -174,8 +208,8 @@ const join = (a, b) => {
 };
 const typeOf = new Map();
 for (const x of products) {
-  join(`name:${key(x.p.name)}`, `name:${key(x.p.name)}`);
-  typeOf.set(key(x.p.name), x.type);
+  join(`name:${key(x.name)}`, `name:${key(x.name)}`);
+  typeOf.set(key(x.name), x.type);
 }
 const names = [...typeOf.keys()];
 for (let i = 0; i < names.length; i++)
@@ -183,21 +217,26 @@ for (let i = 0; i < names.length; i++)
     if (typeOf.get(names[i]) === typeOf.get(names[j]) && typoApart(names[i], names[j])) join(`name:${names[i]}`, `name:${names[j]}`);
 const byName = new Map();
 for (const x of products) {
-  const k = find(`name:${key(x.p.name)}`);
+  const k = find(`name:${key(x.name)}`);
   (byName.get(k) ?? byName.set(k, []).get(k)).push(x);
 }
 /** Misspellings that no other spelling outvotes. */
 const NAME_FIXES = { 'Amalgamight, Moprhic Enforcer': 'Amalgamight, Morphic Enforcer' };
 /** How many different card names use each word: a misspelled word ("Maser") is used by one. */
 const wordUse = new Map();
-for (const n of new Set(products.map((x) => cleanName(x.p.name))))
+for (const n of new Set(products.map((x) => x.name)))
   for (const w of new Set(n.toLowerCase().match(/[a-z]+/g) ?? [])) wordUse.set(w, (wordUse.get(w) ?? 0) + 1);
 const rarestWord = (n) => Math.min(...(n.toLowerCase().match(/[a-z]+/g) ?? ['']).map((w) => wordUse.get(w) ?? 0));
-/** The name most printings agree on; on a tie, the one spelled like other cards, then the first printing's. */
+/**
+ * DeckPlanet's name; otherwise the name most printings agree on, and on a tie the one spelled like other
+ * cards, then the first printing's.
+ */
 const commonName = (printings) => {
   const count = new Map();
-  for (const x of [...printings].sort(order)) count.set(cleanName(x.p.name), (count.get(cleanName(x.p.name)) ?? 0) + 1);
-  const name = [...count].sort((a, b) => b[1] - a[1] || rarestWord(b[0]) - rarestWord(a[0]))[0][0];
+  for (const x of [...printings].sort(order)) count.set(x.name, (count.get(x.name) ?? 0) + 1);
+  const name = [...count].sort(
+    (a, b) => Number(dpNames.has(key(b[0]))) - Number(dpNames.has(key(a[0]))) || b[1] - a[1] || rarestWord(b[0]) - rarestWord(a[0]),
+  )[0][0];
   return NAME_FIXES[name] ?? name;
 };
 
@@ -248,17 +287,32 @@ for (const printings of byName.values()) {
 }
 for (const c of cards) if (!c.alt.length) delete c.alt;
 
+// Contender health and errata from DeckPlanet, by name (its first printing with health wins).
+const dpByName = new Map();
+for (const d of deckplanet) {
+  const was = dpByName.get(key(d.name));
+  if (!was || (was.health == null && d.health != null)) dpByName.set(key(d.name), d);
+}
+for (const c of cards) {
+  const d = dpByName.get(key(c.name));
+  if (d?.health != null && c.type === 'Contender') c.health = d.health;
+  if (d?.errata) c.errata = d.errata;
+}
+
 // Two-sided Contenders that TCGplayer lists as one product per side: one card here, front and back, with
-// the colors and names of both (rule 100.2g.1). Front first.
+// the colors and names of both (rule 100.2g.1). Front first. DeckPlanet lists them with the back's name.
 const TWO_SIDED = [['Shadowlight, Bright Beacon', 'Shadowlight, Dark Absence']];
+for (const d of deckplanet)
+  if (d.backName && !TWO_SIDED.some(([f, b]) => key(f) === key(d.name) && key(b) === key(d.backName))) TWO_SIDED.push([d.name, d.backName]);
 for (const [frontName, backName] of TWO_SIDED) {
-  const front = cards.find((c) => c.name === frontName);
-  const back = cards.find((c) => c.name === backName);
+  const front = cards.find((c) => key(c.name) === key(frontName));
+  const back = cards.find((c) => key(c.name) === key(backName));
   if (!front || !back) {
     console.warn(`  two-sided Contender not found: ${frontName} / ${backName}`);
     continue;
   }
-  front.back = { name: back.name, text: back.text, colors: back.colors, attack: back.attack, defense: back.defense, img: back.img };
+  const backHealth = dpByName.get(key(frontName))?.backHealth ?? back.health;
+  front.back = { name: back.name, text: back.text, colors: back.colors, attack: back.attack, defense: back.defense, health: backHealth, img: back.img };
   front.colors = [...new Set([...front.colors, ...back.colors])];
   front.affiliations = [...new Set([...front.affiliations, ...back.affiliations])];
   front.alt = [...new Set([...(front.alt ?? []), back.id, ...(back.alt ?? [])])];

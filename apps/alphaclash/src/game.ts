@@ -28,6 +28,10 @@ export interface AcCard extends Card {
   gems: string;
   attack: number | null;
   defense: number | null;
+  /** A Contender's starting health (from DeckPlanet). */
+  health?: number;
+  /** The card's current wording where it has errata (from DeckPlanet). */
+  errata?: string;
   /** The bracketed character name ("Moxie"). */
   character?: string;
   planet?: string;
@@ -43,7 +47,7 @@ export interface AcCard extends Card {
   sets: string[];
   img: number;
   /** A two-sided Contender's other side. */
-  back?: { name: string; text?: string; colors: string[]; attack: number | null; defense: number | null; img: number };
+  back?: { name: string; text?: string; colors: string[]; attack: number | null; defense: number | null; health?: number; img: number };
 }
 
 export const ROLES = ['Destroyer', 'Savior', 'Sentinel'];
@@ -340,6 +344,7 @@ export const game: GameDef<AcCard> = {
     rows.push(['Color', c.colors.join(' / ') || '—']);
     if (c.cost != null) rows.push(['Cost', costText(c)!]);
     if (c.attack != null || c.defense != null) rows.push(['Attack / defense', `${c.attack ?? '–'} / ${c.defense ?? '–'}`]);
+    if (c.health != null) rows.push(['Health', c.back?.health != null && c.back.health !== c.health ? `${c.health} (other side ${c.back.health})` : String(c.health)]);
     if (c.character) rows.push(['Character', c.character]);
     if (c.affiliations.length) rows.push(['Affiliation', c.affiliations.join(', ')]);
     if (c.planet) rows.push(['Planet', c.planet]);
@@ -358,9 +363,13 @@ export const game: GameDef<AcCard> = {
     rows.push(['Price', money(c.price)]);
     return rows;
   },
-  text: (c) => [...(c.text ? [c.text] : []), ...(c.back?.text ? [`Other side: ${c.back.name}\n${c.back.text}`] : [])],
+  text: (c) => [
+    ...(c.text ? [c.text] : []),
+    ...(c.errata ? [`Errata (current wording): ${c.errata}`] : []),
+    ...(c.back?.text ? [`Other side: ${c.back.name}\n${c.back.text}`] : []),
+  ],
   searchText: (c) =>
-    [c.name, c.id, ...(c.alt ?? []), c.type, ...(c.subtypes ?? []), ...c.colors, c.character, c.planet, c.location, ...c.affiliations, ...c.keywords, c.text, c.back?.name, c.back?.text, ...c.sets]
+    [c.name, c.id, ...(c.alt ?? []), c.type, ...(c.subtypes ?? []), ...c.colors, c.character, c.planet, c.location, ...c.affiliations, ...c.keywords, c.text, c.errata, c.back?.name, c.back?.text, ...c.sets]
       .filter(Boolean)
       .join(' ')
       .toLowerCase(),
