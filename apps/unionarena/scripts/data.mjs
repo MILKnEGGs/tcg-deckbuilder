@@ -37,6 +37,18 @@ async function pool(items, size, fn) {
 }
 
 const field = (p, name) => (p.extendedData ?? []).find((e) => e.name === name)?.value;
+/**
+ * TCGplayer's rarity as a full name. Since November 2026 TCGplayer lists newer cards with codes ("SR",
+ * "PcC") and older ones with full names, which would show up twice in the rarity filter.
+ */
+const RARITY = {
+  C: 'Common', U: 'Uncommon', UC: 'Uncommon', R: 'Rare', SR: 'Super Rare', SP: 'Special', SCR: 'Secret Rare',
+  PcC: 'Precious Common', PcU: 'Precious Uncommon', PcR: 'Precious Rare', PcSR: 'Precious Super Rare', PcSCR: 'Precious Secret Rare',
+};
+const rarityOf = (p) => {
+  const v = field(p, 'Rarity')?.trim() ?? '';
+  return RARITY[v] ?? v;
+};
 const num = (v) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? null : Number(v));
 const html = (s) =>
   s
@@ -119,7 +131,7 @@ for (const [id, list] of byNumber) {
     // "[Draw] Draw a card." -> "Draw"; the deck may hold at most 4 each of Special, Color and Final.
     trigger: trigger ? titleCase(/^\[([^\]]+)\]/.exec(trigger)?.[1] ?? 'Other') : undefined,
     triggerText: trigger,
-    rarity: field(p, 'Rarity') ?? '',
+    rarity: rarityOf(p),
     text: html(field(p, 'Description')),
     released: list.filter((x) => !x.promoSet).map((x) => x.released).sort()[0],
     img: p.productId,

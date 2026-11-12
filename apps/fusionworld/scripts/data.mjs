@@ -52,6 +52,15 @@ const html = (s) =>
     .replace(/\n{2,}/g, '\n')
     .trim() || undefined;
 /**
+ * TCGplayer's rarity as a full name. On 2026-11-10 TCGplayer switched to codes ("L", "SR"), and the
+ * leader check and rarity filter go by the full names.
+ */
+const RARITY = { L: 'Leader', C: 'Common', UC: 'Uncommon', R: 'Rare', SR: 'Super Rare', SCR: 'Secret Rare', PR: 'Promo' };
+const rarityOf = (p) => {
+  const v = field(p, 'Rarity')?.trim() ?? '';
+  return RARITY[v.toUpperCase()] ?? v;
+};
+/**
  * TCGplayer's name without the bits that tell printings apart: "Vegeta - FB03-047 (Alternate Art)" and
  * "Ginyu (Judge Pack (Store Judge) 01)" -> "Vegeta", "Ginyu".
  */
@@ -152,7 +161,7 @@ for (const [id, list] of byNumber) {
   if (colors.length > 1 && paid.colorCost) colors = [...new Set([...paid.colorCost].map((l) => COLOR_LETTER[l]).filter(Boolean))];
   // TCGplayer calls a few battle cards leaders (FB10-085 Bido, FS08-06); real leaders have the Leader rarity
   // and no cost.
-  const type = main.type === 'Leader' && (field(p, 'Rarity') !== 'Leader' || paid.cost != null) ? 'Battle' : main.type;
+  const type = main.type === 'Leader' && (rarityOf(p) !== 'Leader' || paid.cost != null) ? 'Battle' : main.type;
 
   const card = {
     id,
@@ -163,7 +172,7 @@ for (const [id, list] of byNumber) {
     power: null,
     combo: num(field(p, 'Combo Power')),
     traits,
-    rarity: field(p, 'Rarity') ?? '',
+    rarity: rarityOf(p),
     set: id.split('-')[0],
     released: list.filter((x) => !x.promoSet).map((x) => x.released).sort()[0],
     img: p.productId,
@@ -193,6 +202,11 @@ for (const [id, list] of byNumber) {
   cards.push(card);
 }
 cards.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+
+// A deck can't be built without leaders. If TCGplayer changes how it marks them again, fail here so the
+// deploy stops and the site keeps yesterday's cards, instead of publishing an app with no leaders.
+const leaders = cards.filter((c) => c.type === 'Leader').length;
+if (leaders < 40) throw new Error(`Only ${leaders} leaders found: has TCGplayer changed its CardType or Rarity fields?`);
 
 mkdirSync(new URL('.', OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify({ updated: new Date().toISOString(), cards }));
